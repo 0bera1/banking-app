@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  # PostgreSQL servisi
+  postgres:
+    image: postgres:14-alpine  # Hafif bir PostgreSQL imajı
+    container_name: banking_postgres  # Konteyner adı
+    environment:
+      POSTGRES_USER: postgres  # PostgreSQL kullanıcı adı
+      POSTGRES_PASSWORD: postgres  # PostgreSQL şifresi
+      POSTGRES_DB: banking_app  # Veritabanı adı
+    ports:
+      - "5432:5432"  # Host:Container port mapping
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Veri kalıcılığı için volume
+    healthcheck:  # Sağlık kontrolü
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:  # Veri volume'u
+    driver: local 

@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    // Modül sistemi ayarları
+    "module": "commonjs", // Node.js için CommonJS modül sistemi
+    "declaration": true, // .d.ts dosyaları oluştur
+    "removeComments": true, // Yorumları kaldır
+    "emitDecoratorMetadata": true, // Decorator'lar için metadata oluştur
+    "experimentalDecorators": true, // Decorator'ları etkinleştir
+    "allowSyntheticDefaultImports": true, // Varsayılan import'ları etkinleştir
+
+    // Hedef JavaScript sürümü
+    "target": "es2017", // ES2017 özelliklerini kullan
+
+    // Derleme ayarları
+    "sourceMap": true, // Source map oluştur
+    "outDir": "./dist", // Çıktı dizini
+    "baseUrl": "./", // Temel dizin
+    "incremental": true, // Artımlı derleme
+
+    // Tip kontrol ayarları
+    "skipLibCheck": true, // Kütüphane tiplerini kontrol etme
+    "strictNullChecks": false, // Null kontrolünü devre dışı bırak
+    "noImplicitAny": false, // Implicit any'yi devre dışı bırak
+    "strictBindCallApply": false, // Bind/Call/Apply kontrolünü devre dışı bırak
+    "forceConsistentCasingInFileNames": false, // Dosya adı büyük/küçük harf kontrolünü devre dışı bırak
+    "noFallthroughCasesInSwitch": false // Switch case düşme kontrolünü devre dışı bırak
+  }
+} 
