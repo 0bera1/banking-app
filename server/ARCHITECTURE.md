@@ -14,6 +14,8 @@
   - `transactions` tablosu: Para transferlerini kaydeder
   - `users` tablosu: Kullanıcı bilgilerini tutar
   - `audit_logs` tablosu: Audit log kayıtlarını tutar
+  - `transaction_limits` tablosu: İşlem limitlerini tutar
+  - `exchange_rates` tablosu: Döviz kurlarını tutar
   - İndeksler ve trigger'lar tanımlanır
 - `002_update_transactions.sql`: Transactions tablosuna description alanı ekler
 
@@ -61,6 +63,7 @@
 ### 9. Döviz Kuru Modülü
 - `exchange.module.ts`: Döviz kuru modülü
 - `exchange.service.ts`: Döviz kuru işlemlerini yönetir
+- `exchange.controller.ts`: Döviz kuru API endpoint'lerini tanımlar
 - Döviz kuru dönüşümleri ve hesaplamaları
 
 ### 10. Güvenlik ve Performans
@@ -78,6 +81,8 @@
 3. `AccountsModule` ve `TransactionsModule` birbiriyle etkileşim halindedir
 4. `AuditModule` tüm işlemleri loglar
 5. `UsersModule` ve `AuthModule` kullanıcı yönetimi ve kimlik doğrulama işlemlerini yönetir
+6. `ExchangeModule` para birimi dönüşümlerini yönetir
+7. `TransactionLimitsModule` işlem limitlerini kontrol eder
 
 ## Veri Akışı
 
@@ -97,6 +102,7 @@
    - `AccountsService`: Sadece hesap işlemleri (oluşturma, silme, güncelleme) ile ilgilenir
    - `TransactionsService`: Sadece para transferi işlemlerini yönetir
    - `AuditService`: Sadece işlem loglarını tutar
+   - `ExchangeService`: Sadece döviz kuru işlemlerini yönetir
    - Her controller sadece kendi endpoint'lerini yönetir
 
 2. **Open/Closed Principle (OCP)**
@@ -125,6 +131,7 @@
      constructor(
        private readonly databaseService: DatabaseService,
        private readonly auditService: AuditService,
+       private readonly exchangeService: ExchangeService,
      ) {}
      ```
    - `AccountsService` constructor'ında bağımlılık:
@@ -139,9 +146,18 @@
    - `TransactionsModule` içinde bağımlılıklar:
      ```typescript
      @Module({
-       imports: [DatabaseModule, AccountsModule, AuditModule],
+       imports: [DatabaseModule, AccountsModule, AuditModule, ExchangeModule],
        controllers: [TransactionsController],
        providers: [TransactionsService],
        exports: [TransactionsService]
+     })
+     ```
+   - `ExchangeModule` içinde bağımlılıklar:
+     ```typescript
+     @Module({
+       imports: [DatabaseModule],
+       controllers: [ExchangeController],
+       providers: [ExchangeService],
+       exports: [ExchangeService]
      })
      ```
