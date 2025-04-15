@@ -55,9 +55,65 @@
 - ✅ Veritabanı indeksleri
 - ✅ Trigger'lar
 
+#### Veritabanı Tabloları ve Amaçları
+
+1. `user_sessions` Tablosu:
+   - Kullanıcı oturumlarını takip etmek için
+   - JWT token'ların geçerlilik süresini kontrol etmek için
+   - Kullanıcının aktif oturumlarını yönetmek için
+   - Güvenlik açısından kullanıcının nerede ve ne zaman giriş yaptığını kaydetmek için
+
+2. `user_roles` Tablosu:
+   - Kullanıcı yetkilendirme sistemi için
+   - Farklı kullanıcı tipleri için farklı yetkiler tanımlamak için (örn: admin, müşteri, çalışan)
+   - Rol bazlı erişim kontrolü (RBAC) için
+   - İleride yeni roller eklemek için esneklik sağlamak için
+
+3. `exchange_rates` Tablosu:
+   - Çoklu para birimi desteği için
+   - Döviz kurlarını güncel tutmak için
+   - Para birimi dönüşümlerini yapmak için
+   - Farklı para birimleri arası transfer işlemleri için
+
+#### Trigger'lar ve Amaçları
+
+Tüm tablolarda kullanılan `update_updated_at_column()` trigger fonksiyonu:
+- Her tabloda `updated_at` sütununu otomatik olarak günceller
+- Veri değişikliklerinin ne zaman yapıldığını takip eder
+- Audit ve loglama işlemleri için zaman damgası sağlar
+
+Trigger'ların kullanıldığı tablolar:
+- `accounts` - Hesap bilgileri güncellendiğinde
+- `transactions` - İşlem bilgileri güncellendiğinde
+- `users` - Kullanıcı bilgileri güncellendiğinde
+- `user_sessions` - Oturum bilgileri güncellendiğinde
+- `user_roles` - Rol bilgileri güncellendiğinde
+- `exchange_rates` - Döviz kurları güncellendiğinde
+- `audit_logs` - Log kayıtları güncellendiğinde
+
+##### Trigger'ların Performansa Etkisi
+
+Avantajları:
+- ✅ Otomatik zaman damgası güncellemesi
+- ✅ Kod tekrarını önler (her sorguda manuel güncelleme yapmaya gerek kalmaz)
+- ✅ Tutarlı veri sağlar (tüm güncellemeler aynı şekilde işlenir)
+- ✅ Uygulama katmanında ek kod yazmaya gerek kalmaz
+
+Dezavantajları:
+- ❌ Her güncelleme işleminde ek yük oluşturur
+- ❌ Trigger'ların yanlış kullanımı performans sorunlarına yol açabilir
+- ❌ Debug etmesi zor olabilir
+- ❌ Karmaşık trigger'lar veritabanı yükünü artırabilir
+
+Performans İyileştirmeleri:
+- 🔧 Trigger'lar basit ve hızlı çalışacak şekilde tasarlandı
+- 🔧 Sadece gerekli tablolarda kullanıldı
+- 🔧 Gereksiz trigger'lar oluşturulmadı
+- 🔧 Her trigger sadece tek bir işlem yapıyor (updated_at güncelleme)
+
 ### 2. Güvenlik
 - ✅ SQL injection koruması
-- ✅ Prepared statements
+- ✅ Prepared statements(Her sorguda manuel olarak "updated_at = şu anki zaman" yazmamıza gerek kalmaz)
 - ✅ JWT token yönetimi
 - ✅ Şifre hashleme
 - ✅ Rate limiting
@@ -110,3 +166,13 @@
 
 ### Audit Log
 - `GET /audit` - Log kayıtlarını görüntüleme 
+
+# Bilgi :
+
+- Database'de `client` alma metodunu kullanmamız gereken durumlar:
+    - Birden fazla tabloyu etkileyen işlemlerde
+    - Veri tutarlılığının kritik olduğu durumlarda
+    - Para transferi gibi atomik işlemlerde
+    - Büyük veri işlemlerinde
+    - Toplu güncellemelerde
+    - Raporlama işlemlerinde
