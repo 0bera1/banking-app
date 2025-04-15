@@ -45,6 +45,7 @@ export class AccountsService {
             console.log('Executing query:', query);
             console.log('With values:', values);
 
+            // Query'i çalıştır
             const result = await this.databaseService.query(query, values);
             console.log('Query result:', result);
             return result.rows[0];

@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 -- User sessions tablosu
+-- Kullanıcı oturumlarının kaydedildiği tablo
 CREATE TABLE IF NOT EXISTS user_sessions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -65,6 +66,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 );
 
 -- User roles tablosu
+-- Kullanıcı rollerinin tanımlandığı tablo
 CREATE TABLE IF NOT EXISTS user_roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
@@ -73,6 +75,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 );
 
 -- Exchange rates tablosu
+-- Döviz kurlarının kaydedildiği tablo
 CREATE TABLE IF NOT EXISTS exchange_rates (
     id SERIAL PRIMARY KEY,
     from_currency VARCHAR(3) NOT NULL,
@@ -95,47 +98,84 @@ CREATE TABLE IF NOT EXISTS transaction_limits (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id)
 );
-
--- Updated_at trigger'ları
+-- Bu fonksiyonun görevi:
+-- Herhangi bir tabloya kayıt güncellenince updated_at alanını otomatik olarak şu anki saate ayarlamak.
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
+    -- updated_at alanını şimdiki zaman olarak değiştir
     NEW.updated_at = CURRENT_TIMESTAMP;
+    -- Güncel veriyi kaydetmek için geri döndür
     RETURN NEW;
 END;
 $$ language 'plpgsql';
 
+-- Kullanıcılar (users) tablosuna bir trigger ekliyoruz
+-- Ne zaman bir kullanıcı kaydı güncellense updated_at otomatik olarak değişsin diye
 CREATE TRIGGER update_users_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- Hesaplar (accounts) tablosuna trigger ekliyoruz
+-- Hesap bilgisi her güncellendiğinde updated_at otomatik olarak değişir
 CREATE TRIGGER update_accounts_updated_at
     BEFORE UPDATE ON accounts
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+-- İşlem limitleri tablosuna trigger ekliyoruz
+-- Bir limit bilgisi değişirse updated_at alanı da anında güncellenir
 CREATE TRIGGER update_transaction_limits_updated_at
     BEFORE UPDATE ON transaction_limits
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- İndeksler
+-- ---------------- İndeksler ------------------
+
+-- users tablosunda email’e göre arama yaparken sistemin daha hızlı cevap vermesi için indeks
 CREATE INDEX idx_users_email ON users(email);
+
+-- Kullanıcı adlarına göre aramaları hızlandırmak için indeks
 CREATE INDEX idx_users_username ON users(username);
+
+-- accounts tablosunda user_id ile arama yaparken işlemi hızlandırmak için indeks
 CREATE INDEX idx_accounts_user_id ON accounts(user_id);
+
+-- Kart numarasına göre aramalar hızlı olsun diye indeks
 CREATE INDEX idx_accounts_card_number ON accounts(card_number);
+
+-- transactions tablosunda gönderici id’ye göre arama daha hızlı olsun diye indeks
 CREATE INDEX idx_transactions_sender ON transactions(sender_id);
+
+-- transactions tablosunda alıcı id’ye göre arama daha hızlı olsun diye indeks
 CREATE INDEX idx_transactions_receiver ON transactions(receiver_id);
+
+-- işlemler genelde tarih sırasına göre listelendiği için created_at alanına indeks
 CREATE INDEX idx_transactions_created_at ON transactions(created_at);
+
+-- audit_logs tablosunda action’a göre sorgular hızlansın diye indeks
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
+
+-- audit_logs tablosunda table_name’e göre arama yaparken hızlansın diye indeks
 CREATE INDEX idx_audit_logs_table_name ON audit_logs(table_name);
+
+-- audit_logs içinde belirli bir kaydı id’ye göre bulmak için indeks
 CREATE INDEX idx_audit_logs_record_id ON audit_logs(record_id);
+
+-- user_sessions tablosunda token’a göre arama yapılacaksa hız kazandırır
 CREATE INDEX idx_user_sessions_token ON user_sessions(token);
+
+-- user_sessions tablosunda user_id’ye göre sorgular hızlansın diye indeks
 CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
 
--- Örnek roller
+-- ---------------- Roller ------------------
+
+-- Sistemde iki tane varsayılan rol ekliyoruz:
+-- admin => Sistem yöneticisi olacak
+-- user => Normal kullanıcı olacak
+-- Eğer zaten bu isimde bir rol varsa, hata vermesin diye "ON CONFLICT" kullanıyoruz.
 INSERT INTO user_roles (name, description) VALUES
     ('admin', 'Sistem yöneticisi'),
     ('user', 'Normal kullanıcı')
-ON CONFLICT (name) DO NOTHING; 
+ON CONFLICT (name) DO NOTHING; -- Eğer aynı isimde rol varsa boşver.
