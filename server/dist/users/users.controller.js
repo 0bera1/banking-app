@@ -25,9 +25,9 @@ let UsersController = class UsersController {
         }
         catch (error) {
             if (error.code === '23505') {
-                throw new common_1.HttpException('Bu email veya kullanıcı adı zaten kullanımda', common_1.HttpStatus.CONFLICT);
+                throw new common_1.HttpException('This email or username is already in use', common_1.HttpStatus.CONFLICT);
             }
-            throw new common_1.HttpException('Kullanıcı oluşturulurken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Error creating user', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async findOne(id) {
@@ -38,7 +38,7 @@ let UsersController = class UsersController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('Kullanıcı bilgileri alınırken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Error fetching user details', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async update(id, userData) {
@@ -49,7 +49,7 @@ let UsersController = class UsersController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('Kullanıcı güncellenirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Error updating user', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async remove(id) {
@@ -60,7 +60,7 @@ let UsersController = class UsersController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('Kullanıcı silinirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Error deleting user', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };

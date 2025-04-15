@@ -6,11 +6,14 @@
 - `package.json`: Proje bağımlılıklarını ve script'leri tanımlar
 - `tsconfig.json`: TypeScript yapılandırmasını içerir
 - `nest-cli.json`: NestJS CLI yapılandırmasını içerir
+- `docker-compose.yml`: PostgreSQL veritabanı için Docker yapılandırması
 
 ### 2. Veritabanı Migrasyonları
 - `001_initial_schema.sql`: İlk veritabanı şemasını oluşturur
   - `accounts` tablosu: Kullanıcı hesaplarını tutar
   - `transactions` tablosu: Para transferlerini kaydeder
+  - `users` tablosu: Kullanıcı bilgilerini tutar
+  - `audit_logs` tablosu: Audit log kayıtlarını tutar
   - İndeksler ve trigger'lar tanımlanır
 - `002_update_transactions.sql`: Transactions tablosuna description alanı ekler
 
@@ -18,10 +21,13 @@
 - `app.module.ts`: Ana uygulama modülü
   - Diğer tüm modülleri birleştirir
   - Global servisleri tanımlar
+  - ConfigModule'u global olarak yapılandırır
 
 ### 4. Veritabanı Modülü
 - `database.module.ts`: Veritabanı bağlantısını yönetir
 - `database.service.ts`: Veritabanı işlemlerini gerçekleştirir
+  - PostgreSQL bağlantı havuzu yönetimi
+  - Sorgu çalıştırma ve transaction yönetimi
 
 ### 5. Hesap Modülü
 - `accounts.module.ts`: Hesap işlemleri modülü
@@ -35,20 +41,35 @@
 - `transactions.controller.ts`: İşlem API endpoint'lerini tanımlar
 - `dto/create-transaction.dto.ts`: İşlem oluşturma veri transfer nesnesi
 - `dto/get-transactions.dto.ts`: İşlem sorgulama veri transfer nesnesi
+- `transaction-limits.module.ts`: İşlem limitleri modülü
 
-### 7. Audit Modülü - (table)
+### 7. Audit Modülü
 - `audit.module.ts`: Audit log modülü
 - `audit.service.ts`: Audit log işlemlerini yönetir
-- `audit.controller.ts`: Audit log API endpoint'lerini tanımlar -
+- `audit.controller.ts`: Audit log API endpoint'lerini tanımlar
 
-### 8. Kullanıcı ve Kimlik Doğrulama Modülleri (Opsiyonel - Henüz Implemente Edilmedi)
-- `users.module.ts`: Kullanıcı modülü (Boş şablon)
-- `auth.module.ts`: Kimlik doğrulama modülü (Boş şablon)
-- Not: Bu modüller opsiyonel olarak planlanmıştır ve ileride implemente edilecektir
-  - `users.service.ts`: Kullanıcı işlemlerini yönetecek servis (Oluşturulacak)
-  - `users.controller.ts`: Kullanıcı API endpoint'lerini tanımlayacak controller (Oluşturulacak)
-  - `auth.service.ts`: Kimlik doğrulama işlemlerini yönetecek servis (Oluşturulacak)
-  - `auth.controller.ts`: Kimlik doğrulama API endpoint'lerini tanımlayacak controller (Oluşturulacak)
+### 8. Kullanıcı ve Kimlik Doğrulama Modülleri
+- `users.module.ts`: Kullanıcı modülü
+  - `users.service.ts`: Kullanıcı işlemlerini yönetir
+  - `users.controller.ts`: Kullanıcı API endpoint'lerini tanımlar
+  - `entities/user.entity.ts`: Kullanıcı veri modelini tanımlar
+- `auth.module.ts`: Kimlik doğrulama modülü
+  - `auth.service.ts`: Kimlik doğrulama işlemlerini yönetir
+  - JWT token yönetimi
+  - Kullanıcı doğrulama ve yetkilendirme
+
+### 9. Döviz Kuru Modülü
+- `exchange.module.ts`: Döviz kuru modülü
+- `exchange.service.ts`: Döviz kuru işlemlerini yönetir
+- Döviz kuru dönüşümleri ve hesaplamaları
+
+### 10. Güvenlik ve Performans
+- JWT tabanlı kimlik doğrulama
+- Şifre hashleme (bcrypt)
+- PostgreSQL bağlantı havuzu
+- Audit logging
+- Transaction limitleri
+- Döviz kuru desteği
 
 ## Modüller Arası İlişkiler
 

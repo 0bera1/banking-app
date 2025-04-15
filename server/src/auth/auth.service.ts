@@ -10,6 +10,27 @@ export class AuthService {
         private readonly jwtService: JwtService,
     ) {}
 
+    // Kullanıcı kaydı
+    async register(username: string, email: string, password: string) {
+        try {
+            console.log('Registering user:', { username, email });
+            const hashedPassword = await this.hashPassword(password);
+            console.log('Password hashed successfully');
+            const user = await this.usersService.create({
+                username,
+                email,
+                password_hash: hashedPassword,
+            });
+            console.log('User created successfully:', user);
+            
+            const { password_hash, ...result } = user;
+            return result;
+        } catch (error) {
+            console.error('Error in register:', error);
+            throw new Error('Error registering: ' + error.message);
+        }
+    }
+
     // Kullanıcı doğrulama
     async validateUser(email: string, password: string): Promise<any> {
         const user = await this.usersService.findByEmail(email);

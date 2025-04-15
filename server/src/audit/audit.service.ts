@@ -2,9 +2,31 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AuditLog } from './entities/audit-log.entity';
 
+interface LogActionParams {
+  userId: number;
+  action: string;
+  details: Record<string, any>;
+}
+
 @Injectable()
 export class AuditService {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async logAction({ userId, action, details }: LogActionParams): Promise<void> {
+    const query = `
+      INSERT INTO audit_logs 
+      (user_id, action, table_name, record_id, new_data)
+      VALUES ($1, $2, $3, $4, $5)
+    `;
+
+    await this.databaseService.query(query, [
+      userId,
+      action,
+      'transactions',
+      details.transactionId?.toString() || '0',
+      JSON.stringify(details)
+    ]);
+  }
 
   // log() metodu, bir işlem gerçekleştiğinde bu işlemi audit_logs tablosuna kaydeder.
   async log(
@@ -51,7 +73,7 @@ export class AuditService {
     // Dinamik olarak filtre eklemek için başlangıç sorgusu.
     let query = `
       SELECT 
-        id,
+        id::text,
         action,
         table_name as "tableName",
         record_id as "recordId",
@@ -103,12 +125,6 @@ export class AuditService {
       paramIndex++;
     }
 
-    // Toplam kayıt sayısını öğrenmek için sorgunun SELECT kısmı değiştirilir.
-    const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM');
-
-    // Toplam sayıyı veritabanından çeker.
-    const countResult = await this.databaseService.query(countQuery, params);
-
     // Sonuçları sıralayıp, sayfalama işlemi için LIMIT ve OFFSET eklenir.
     query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset); // Limit ve offset parametre olarak eklenir.
@@ -116,14 +132,30 @@ export class AuditService {
     // Log verileri veritabanından çekilir.
     const result = await this.databaseService.query(query, params);
 
+    // Toplam kayıt sayısını öğrenmek için sorgunun SELECT kısmı değiştirilir.
+    const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM')
+                           .replace(/ORDER BY.*$/, '');
+
+    // Toplam sayıyı veritabanından çeker.
+    const countResult = await this.databaseService.query(countQuery, params.slice(0, -2));
+
     // Sonuçlar JSON parse
     return {
       logs: result.rows.map(row => ({
         ...row,
-        oldData: row.oldData ? JSON.parse(row.oldData) : null,
-        newData: row.newData ? JSON.parse(row.newData) : null,
+        oldData: row.oldData ? this.safeJsonParse(row.oldData) : null,
+        newData: row.newData ? this.safeJsonParse(row.newData) : null,
       })),
       total: parseInt(countResult.rows[0].total),
     };
+  }
+
+  private safeJsonParse(data: any): any {
+    try {
+      return typeof data === 'string' ? JSON.parse(data) : data;
+    } catch (error) {
+      console.error('Error parsing JSON:', error);
+      return data;
+    }
   }
 }

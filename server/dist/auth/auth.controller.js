@@ -25,7 +25,7 @@ let AuthController = class AuthController {
         try {
             const user = await this.authService.validateUser(loginData.email, loginData.password);
             if (!user) {
-                throw new common_1.HttpException('Geçersiz email veya şifre', common_1.HttpStatus.UNAUTHORIZED);
+                throw new common_1.HttpException('Invalid email or password', common_1.HttpStatus.UNAUTHORIZED);
             }
             return this.authService.login(user);
         }
@@ -33,21 +33,20 @@ let AuthController = class AuthController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('Giriş yapılırken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Error logging in', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async register(userData) {
         try {
-            const hashedPassword = await this.authService.hashPassword(userData.password_hash);
-            userData.password_hash = hashedPassword;
-            const user = await this.usersService.create(userData);
+            const user = await this.authService.register(userData.username, userData.email, userData.password);
             return this.authService.login(user);
         }
         catch (error) {
+            console.error('Registration error:', error);
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('Kayıt olurken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException(`Error registering: ${error.message}`, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };

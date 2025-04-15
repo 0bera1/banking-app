@@ -1,9 +1,10 @@
 export declare class CreateTransactionDto {
-    senderAccountId: string;
-    receiverAccountId: string;
+    fromAccountId: number;
+    toAccountId: number;
     amount: number;
-    description: string;
-    transaction_type: string;
+    currency: string;
+    description?: string;
+    transaction_type?: string;
     card_brand?: string;
     card_issuer?: string;
     card_type?: string;
@@ -19,4 +20,6 @@ export declare class CreateTransactionDto {
     phone?: string;
     device_type?: string;
     some_field?: string;
+    sender_id: number;
+    receiver_id: number;
 }

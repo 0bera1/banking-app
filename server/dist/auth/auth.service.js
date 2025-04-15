@@ -30,6 +30,25 @@ let AuthService = class AuthService {
         this.usersService = usersService;
         this.jwtService = jwtService;
     }
+    async register(username, email, password) {
+        try {
+            console.log('Registering user:', { username, email });
+            const hashedPassword = await this.hashPassword(password);
+            console.log('Password hashed successfully');
+            const user = await this.usersService.create({
+                username,
+                email,
+                password_hash: hashedPassword,
+            });
+            console.log('User created successfully:', user);
+            const { password_hash } = user, result = __rest(user, ["password_hash"]);
+            return result;
+        }
+        catch (error) {
+            console.error('Error in register:', error);
+            throw new Error('Error registering: ' + error.message);
+        }
+    }
     async validateUser(email, password) {
         const user = await this.usersService.findByEmail(email);
         if (user && await bcrypt.compare(password, user.password_hash)) {
@@ -58,7 +77,7 @@ let AuthService = class AuthService {
             return this.jwtService.verify(token);
         }
         catch (error) {
-            throw new common_1.UnauthorizedException('Geçersiz token');
+            throw new common_1.UnauthorizedException('Invalid token');
         }
     }
     async hashPassword(password) {

@@ -24,10 +24,18 @@ let DatabaseService = class DatabaseService {
     }
     async query(text, params) {
         const start = Date.now();
-        const res = await this.pool.query(text, params);
-        const duration = Date.now() - start;
-        console.log('Executed query', { text, duration, rows: res.rowCount });
-        return res;
+        try {
+            console.log('Executing query:', text);
+            console.log('With params:', params);
+            const res = await this.pool.query(text, params);
+            const duration = Date.now() - start;
+            console.log('Query executed successfully', { text, duration, rows: res.rowCount });
+            return res;
+        }
+        catch (error) {
+            console.error('Error executing query:', error);
+            throw error;
+        }
     }
     async getClient() {
         return await this.pool.connect();

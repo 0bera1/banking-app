@@ -15,15 +15,15 @@ class CreateTransactionDto {
 }
 exports.CreateTransactionDto = CreateTransactionDto;
 __decorate([
-    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateTransactionDto.prototype, "senderAccountId", void 0);
+    __metadata("design:type", Number)
+], CreateTransactionDto.prototype, "fromAccountId", void 0);
 __decorate([
-    (0, class_validator_1.IsUUID)(),
+    (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateTransactionDto.prototype, "receiverAccountId", void 0);
+    __metadata("design:type", Number)
+], CreateTransactionDto.prototype, "toAccountId", void 0);
 __decorate([
     (0, class_validator_1.IsNumber)(),
     (0, class_validator_1.IsNotEmpty)(),
@@ -31,7 +31,24 @@ __decorate([
     __metadata("design:type", Number)
 ], CreateTransactionDto.prototype, "amount", void 0);
 __decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], CreateTransactionDto.prototype, "currency", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], CreateTransactionDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], CreateTransactionDto.prototype, "sender_id", void 0);
+__decorate([
+    (0, class_validator_1.IsInt)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", Number)
+], CreateTransactionDto.prototype, "receiver_id", void 0);
 //# sourceMappingURL=create-transaction.dto.js.map

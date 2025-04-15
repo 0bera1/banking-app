@@ -5,14 +5,10 @@ export declare class TransactionsController {
     private readonly transactionsService;
     constructor(transactionsService: TransactionsService);
     create(createTransactionDto: CreateTransactionDto): Promise<{
-        transactionId: any;
+        id: any;
         status: string;
-        message: string;
+        amount: number;
+        currency: any;
     }>;
-    getTransactions(getTransactionsDto: GetTransactionsDto): Promise<{
-        transactions: any;
-        total: number;
-        limit: number;
-        offset: number;
-    }>;
+    getTransactions(getTransactionsDto: GetTransactionsDto): Promise<any>;
 }

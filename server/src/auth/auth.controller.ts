@@ -31,22 +31,21 @@ export class AuthController {
 
     // Kayıt işlemi
     @Post('register')
-    async register(@Body() userData: Partial<User>) {
+    async register(@Body() userData: { username: string; email: string; password: string }) {
         try {
-            // Şifreyi hashle
-            const hashedPassword = await this.authService.hashPassword(userData.password_hash);
-            userData.password_hash = hashedPassword;
-
-            // Kullanıcıyı oluştur
-            const user = await this.usersService.create(userData);
+            const user = await this.authService.register(
+                userData.username,
+                userData.email,
+                userData.password
+            );
             
-            // Giriş yap
             return this.authService.login(user);
         } catch (error) {
+            console.error('Registration error:', error);
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new HttpException('Error registering', HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException(`Error registering: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 } 

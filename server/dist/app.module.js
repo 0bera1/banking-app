@@ -15,6 +15,8 @@ const auth_module_1 = require("./auth/auth.module");
 const accounts_module_1 = require("./accounts/accounts.module");
 const transactions_module_1 = require("./transactions/transactions.module");
 const audit_module_1 = require("./audit/audit.module");
+const exchange_module_1 = require("./exchange/exchange.module");
+const transaction_limits_module_1 = require("./transactions/transaction-limits.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -29,7 +31,9 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             accounts_module_1.AccountsModule,
             transactions_module_1.TransactionsModule,
-            audit_module_1.AuditModule
+            audit_module_1.AuditModule,
+            exchange_module_1.ExchangeModule,
+            transaction_limits_module_1.TransactionLimitsModule
         ],
         controllers: [],
         providers: [],

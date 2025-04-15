@@ -23,13 +23,20 @@ export class DatabaseService {
   async query(text: string, params?: any[]) {
     // Sorgu başlangıç zamanını kaydediyoruz (performans ölçümü için)
     const start = Date.now();
-    // Sorguyu çalıştırıyoruz ve sonucu bekliyoruz
-    const res = await this.pool.query(text, params);
-    // Sorgu süresini hesaplıyoruz
-    const duration = Date.now() - start;
-    // Sorgu bilgilerini konsola yazdırıyoruz (debugging için)
-    console.log('Executed query', { text, duration, rows: res.rowCount });
-    return res;
+    try {
+      // Sorguyu çalıştırıyoruz ve sonucu bekliyoruz
+      console.log('Executing query:', text);
+      console.log('With params:', params);
+      const res = await this.pool.query(text, params);
+      // Sorgu süresini hesaplıyoruz
+      const duration = Date.now() - start;
+      // Sorgu bilgilerini konsola yazdırıyoruz (debugging için)
+      console.log('Query executed successfully', { text, duration, rows: res.rowCount });
+      return res;
+    } catch (error) {
+      console.error('Error executing query:', error);
+      throw error;
+    }
   }
 
   // Transaction yönetimi için client alma metodu

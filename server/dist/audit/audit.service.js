@@ -16,6 +16,21 @@ let AuditService = class AuditService {
     constructor(databaseService) {
         this.databaseService = databaseService;
     }
+    async logAction({ userId, action, details }) {
+        var _a;
+        const query = `
+      INSERT INTO audit_logs 
+      (user_id, action, table_name, record_id, new_data)
+      VALUES ($1, $2, $3, $4, $5)
+    `;
+        await this.databaseService.query(query, [
+            userId,
+            action,
+            'transactions',
+            ((_a = details.transactionId) === null || _a === void 0 ? void 0 : _a.toString()) || '0',
+            JSON.stringify(details)
+        ]);
+    }
     async log(action, tableName, recordId, oldData, newData, userId, ipAddress, userAgent) {
         const query = `
       INSERT INTO audit_logs 
@@ -36,7 +51,7 @@ let AuditService = class AuditService {
     async getLogs(tableName, recordId, action, startDate, endDate, limit = 100, offset = 0) {
         let query = `
       SELECT 
-        id,
+        id::text,
         action,
         table_name as "tableName",
         record_id as "recordId",
@@ -76,15 +91,25 @@ let AuditService = class AuditService {
             params.push(endDate);
             paramIndex++;
         }
-        const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM');
-        const countResult = await this.databaseService.query(countQuery, params);
         query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
         params.push(limit, offset);
         const result = await this.databaseService.query(query, params);
+        const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM')
+            .replace(/ORDER BY.*$/, '');
+        const countResult = await this.databaseService.query(countQuery, params.slice(0, -2));
         return {
-            logs: result.rows.map(row => (Object.assign(Object.assign({}, row), { oldData: row.oldData ? JSON.parse(row.oldData) : null, newData: row.newData ? JSON.parse(row.newData) : null }))),
+            logs: result.rows.map(row => (Object.assign(Object.assign({}, row), { oldData: row.oldData ? this.safeJsonParse(row.oldData) : null, newData: row.newData ? this.safeJsonParse(row.newData) : null }))),
             total: parseInt(countResult.rows[0].total),
         };
+    }
+    safeJsonParse(data) {
+        try {
+            return typeof data === 'string' ? JSON.parse(data) : data;
+        }
+        catch (error) {
+            console.error('Error parsing JSON:', error);
+            return data;
+        }
     }
 };
 exports.AuditService = AuditService;

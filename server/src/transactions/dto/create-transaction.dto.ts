@@ -1,24 +1,30 @@
-import { IsNotEmpty, IsNumber, IsUUID, Min } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsUUID, Min, IsPositive, IsInt, IsString, IsOptional } from 'class-validator';
 
 // Transaction oluşturma için DTO
 export class CreateTransactionDto {
-    @IsUUID() // UUID formatında bir ID
-    @IsNotEmpty() // Zorunlu alan
-    senderAccountId: string;
-
-    @IsUUID()
+    @IsNumber()
     @IsNotEmpty()
-    receiverAccountId: string; // Alıcı hesap ID'si
+    fromAccountId: number;
+
+    @IsNumber()
+    @IsNotEmpty()
+    toAccountId: number;
 
     @IsNumber()
     @IsNotEmpty()
     @Min(0.01) // Minimum değer
     amount: number; // İşlem miktarı
 
+    @IsString()
     @IsNotEmpty()
-    description: string; // İşlem açıklaması
+    currency: string; // Para birimi
 
-    transaction_type: string; // İşlem türü
+    @IsString()
+    @IsOptional()
+    @IsNotEmpty()
+    description?: string; // İşlem açıklaması
+
+    transaction_type?: string; // İşlem türü
     card_brand?: string; // Kart markası
     card_issuer?: string; // Kart yayıncısı
     card_type?: string; // Kart türü
@@ -34,4 +40,12 @@ export class CreateTransactionDto {
     phone?: string; // Müşteri telefon numarası
     device_type?: string; // Cihaz türü
     some_field?: string; // İsteğe bağlı alan
+
+    @IsInt()
+    @IsNotEmpty()
+    sender_id: number;
+
+    @IsInt()
+    @IsNotEmpty()
+    receiver_id: number;
 } 

@@ -8,24 +8,34 @@ export class UsersService {
 
     // Kullanıcı oluşturma
     async create(userData: Partial<User>): Promise<User> {
-        const query = `
-            INSERT INTO users 
-            (username, email, password_hash, first_name, last_name, role)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-        `;
-        
-        const values = [
-            userData.username,
-            userData.email,
-            userData.password_hash,
-            userData.first_name,
-            userData.last_name,
-            userData.role || 'user'
-        ];
+        try {
+            console.log('Creating user with data:', userData);
+            const query = `
+                INSERT INTO users 
+                (username, email, password_hash, first_name, last_name, role)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
+            
+            const values = [
+                userData.username,
+                userData.email,
+                userData.password_hash,
+                userData.first_name || '',
+                userData.last_name || '',
+                userData.role || 'user'
+            ];
 
-        const result = await this.databaseService.query(query, values);
-        return result.rows[0];
+            console.log('Executing query:', query);
+            console.log('With values:', values);
+
+            const result = await this.databaseService.query(query, values);
+            console.log('Query result:', result);
+            return result.rows[0];
+        } catch (error) {
+            console.error('Error in create:', error);
+            throw error;
+        }
     }
 
     // Kullanıcı silme

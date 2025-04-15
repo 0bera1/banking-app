@@ -4,8 +4,15 @@ import { Account } from './entities/account.entity';
 export declare class AccountsController {
     private readonly accountsService;
     constructor(accountsService: AccountsService);
-    create(createAccountDto: CreateAccountDto): Promise<Account>;
-    findOne(id: string): Promise<Account>;
-    remove(id: string): Promise<void>;
-    findByCardNumber(cardNumber: string): Promise<Account>;
+    create(req: any, createAccountDto: CreateAccountDto): Promise<Account>;
+    findOne(req: any, id: string): Promise<Account>;
+    findAll(req: any): Promise<Account[]>;
+    remove(req: any, id: string): Promise<void>;
+    findByCardNumber(req: any, cardNumber: string): Promise<Account>;
+    deposit(id: string, amount: number): Promise<any>;
+    withdraw(id: string, amount: number): Promise<any>;
+    getBalance(id: string, currency?: string): Promise<{
+        balance: number;
+        currency: string;
+    }>;
 }

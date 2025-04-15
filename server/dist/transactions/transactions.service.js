@@ -12,17 +12,21 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionsService = void 0;
 const common_1 = require("@nestjs/common");
 const database_service_1 = require("../database/database.service");
+const exchange_service_1 = require("../exchange/exchange.service");
 const audit_service_1 = require("../audit/audit.service");
+const transaction_limits_service_1 = require("./transaction-limits.service");
 let TransactionsService = class TransactionsService {
-    constructor(databaseService, auditService) {
+    constructor(databaseService, exchangeService, auditService, transactionLimitsService) {
         this.databaseService = databaseService;
+        this.exchangeService = exchangeService;
         this.auditService = auditService;
+        this.transactionLimitsService = transactionLimitsService;
     }
     async createTransaction(createTransactionDto) {
         const client = await this.databaseService.getClient();
         try {
             await client.query('BEGIN');
-            const senderResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.senderAccountId]);
+            const senderResult = await client.query('SELECT balance, currency, user_id FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.fromAccountId]);
             if (senderResult.rows.length === 0) {
                 throw new common_1.NotFoundException('Sender account not found');
             }
@@ -30,34 +34,59 @@ let TransactionsService = class TransactionsService {
             if (senderBalance < createTransactionDto.amount) {
                 throw new common_1.BadRequestException('Insufficient balance');
             }
-            const receiverResult = await client.query('SELECT id FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.receiverAccountId]);
+            const receiverResult = await client.query('SELECT id, currency FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.toAccountId]);
             if (receiverResult.rows.length === 0) {
                 throw new common_1.NotFoundException('Receiver account not found');
             }
+            const [isDailyLimitExceeded, isWeeklyLimitExceeded, isMonthlyLimitExceeded, isSingleTransactionLimitExceeded,] = await Promise.all([
+                this.transactionLimitsService.checkDailyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+                this.transactionLimitsService.checkWeeklyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+                this.transactionLimitsService.checkMonthlyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+                this.transactionLimitsService.checkSingleTransactionLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+            ]);
+            if (!isDailyLimitExceeded) {
+                throw new common_1.BadRequestException('Günlük transfer limiti aşıldı');
+            }
+            if (!isWeeklyLimitExceeded) {
+                throw new common_1.BadRequestException('Haftalık transfer limiti aşıldı');
+            }
+            if (!isMonthlyLimitExceeded) {
+                throw new common_1.BadRequestException('Aylık transfer limiti aşıldı');
+            }
+            if (!isSingleTransactionLimitExceeded) {
+                throw new common_1.BadRequestException('Tek seferlik transfer limiti aşıldı');
+            }
+            const convertedAmount = await this.exchangeService.convertAmount(createTransactionDto.amount, senderResult.rows[0].currency, receiverResult.rows[0].currency);
             const transactionResult = await client.query(`INSERT INTO transactions 
-                (sender_account_id, receiver_account_id, amount, description, status)
-                VALUES ($1, $2, $3, $4, 'completed')
+                (sender_id, receiver_id, amount, currency, status, description)
+                VALUES ($1, $2, $3, $4, 'completed', $5)
                 RETURNING id`, [
-                createTransactionDto.senderAccountId,
-                createTransactionDto.receiverAccountId,
-                createTransactionDto.amount,
+                createTransactionDto.fromAccountId,
+                createTransactionDto.toAccountId,
+                convertedAmount,
+                senderResult.rows[0].currency,
                 createTransactionDto.description
             ]);
             const transactionId = transactionResult.rows[0].id;
-            await client.query('UPDATE accounts SET balance = balance - $1 WHERE id = $2', [createTransactionDto.amount, createTransactionDto.senderAccountId]);
-            await client.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2', [createTransactionDto.amount, createTransactionDto.receiverAccountId]);
+            await client.query('UPDATE accounts SET balance = balance - $1 WHERE id = $2', [createTransactionDto.amount, createTransactionDto.fromAccountId]);
+            await client.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2', [convertedAmount, createTransactionDto.toAccountId]);
             await client.query('COMMIT');
-            await this.auditService.log('CREATE', 'transactions', transactionId, null, {
-                senderAccountId: createTransactionDto.senderAccountId,
-                receiverAccountId: createTransactionDto.receiverAccountId,
-                amount: createTransactionDto.amount,
-                description: createTransactionDto.description,
-                status: 'completed'
+            await this.auditService.logAction({
+                userId: senderResult.rows[0].user_id,
+                action: 'TRANSFER',
+                details: {
+                    transactionId,
+                    fromAccount: createTransactionDto.fromAccountId,
+                    toAccount: createTransactionDto.toAccountId,
+                    amount: createTransactionDto.amount,
+                    currency: createTransactionDto.currency
+                }
             });
             return {
-                transactionId,
+                id: transactionId,
                 status: 'completed',
-                message: 'Transfer successfully completed'
+                amount: convertedAmount,
+                currency: receiverResult.rows[0].currency
             };
         }
         catch (error) {
@@ -73,48 +102,31 @@ let TransactionsService = class TransactionsService {
         }
     }
     async getTransactions(getTransactionsDto) {
-        const { accountId, limit = 10, offset = 0 } = getTransactionsDto;
-        let query = `
-            SELECT 
-                t.id,
-                t.sender_account_id as "senderAccountId",
-                t.receiver_account_id as "receiverAccountId",
-                t.amount,
-                t.description,
-                t.status,
-                t.created_at as "createdAt",
-                sa.card_number as "senderCardNumber",
-                ra.card_number as "receiverCardNumber"
+        const query = `
+            SELECT t.*, 
+                   a1.card_holder_name as sender_name,
+                   a2.card_holder_name as receiver_name
             FROM transactions t
-            LEFT JOIN accounts sa ON t.sender_account_id = sa.id
-            LEFT JOIN accounts ra ON t.receiver_account_id = ra.id
+            LEFT JOIN accounts a1 ON t.sender_id = a1.id
+            LEFT JOIN accounts a2 ON t.receiver_id = a2.id
+            WHERE t.sender_id = $1 OR t.receiver_id = $1
+            ORDER BY t.created_at DESC
+            LIMIT $2 OFFSET $3
         `;
-        const queryParams = [];
-        if (accountId) {
-            query += ` WHERE t.sender_account_id = $1 OR t.receiver_account_id = $1`;
-            queryParams.push(accountId);
-        }
-        query += ` ORDER BY t.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`;
-        queryParams.push(limit, offset);
-        const result = await this.databaseService.query(query, queryParams);
-        const countQuery = `
-            SELECT COUNT(*) as total
-            FROM transactions t
-            ${accountId ? 'WHERE t.sender_account_id = $1 OR t.receiver_account_id = $1' : ''}
-        `;
-        const countResult = await this.databaseService.query(countQuery, accountId ? [accountId] : []);
-        return {
-            transactions: result.rows,
-            total: parseInt(countResult.rows[0].total),
-            limit,
-            offset
-        };
+        const values = [
+            getTransactionsDto.accountId,
+            getTransactionsDto.limit,
+            getTransactionsDto.offset
+        ];
+        return this.databaseService.query(query, values);
     }
 };
 exports.TransactionsService = TransactionsService;
 exports.TransactionsService = TransactionsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [database_service_1.DatabaseService,
-        audit_service_1.AuditService])
+        exchange_service_1.ExchangeService,
+        audit_service_1.AuditService,
+        transaction_limits_service_1.TransactionLimitsService])
 ], TransactionsService);
 //# sourceMappingURL=transactions.service.js.map

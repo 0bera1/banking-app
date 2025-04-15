@@ -2,13 +2,17 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { DatabaseService } from '../database/database.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsDto } from './dto/get-transactions.dto';
+import { ExchangeService } from '../exchange/exchange.service';
 import { AuditService } from '../audit/audit.service';
+import { TransactionLimitsService } from './transaction-limits.service';
 
 @Injectable()
 export class TransactionsService {
     constructor(
         private readonly databaseService: DatabaseService,  // Veritabanı bağlantısı için servis
+        private readonly exchangeService: ExchangeService,
         private readonly auditService: AuditService,        // İşlem kayıtları için audit servisi
+        private readonly transactionLimitsService: TransactionLimitsService,
     ) {}
 
     async createTransaction(createTransactionDto: CreateTransactionDto) {
@@ -19,8 +23,8 @@ export class TransactionsService {
 
             // Gönderen hesabın bakiyesini kontrol eder
             const senderResult = await client.query(
-                'SELECT balance FROM accounts WHERE id = $1 FOR UPDATE',
-                [createTransactionDto.senderAccountId]
+                'SELECT balance, currency, user_id FROM accounts WHERE id = $1 FOR UPDATE',
+                [createTransactionDto.fromAccountId]
             );
 
             // Eğer gönderen hesap bulunamadıysa
@@ -36,24 +40,61 @@ export class TransactionsService {
 
             // Alıcı hesabın varlığını kontrol eder
             const receiverResult = await client.query(
-                'SELECT id FROM accounts WHERE id = $1 FOR UPDATE',
-                [createTransactionDto.receiverAccountId]
+                'SELECT id, currency FROM accounts WHERE id = $1 FOR UPDATE',
+                [createTransactionDto.toAccountId]
             );
 
             if (receiverResult.rows.length === 0) {
                 throw new NotFoundException('Receiver account not found');
             }
 
-            // Transaction kaydını veritabanına ekler, işlem ID’sini alır
+            // Transaction limitlerini kontrol et
+            const [
+                isDailyLimitExceeded,
+                isWeeklyLimitExceeded,
+                isMonthlyLimitExceeded,
+                isSingleTransactionLimitExceeded,
+            ] = await Promise.all([
+                this.transactionLimitsService.checkDailyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+                this.transactionLimitsService.checkWeeklyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+                this.transactionLimitsService.checkMonthlyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+                this.transactionLimitsService.checkSingleTransactionLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+            ]);
+
+            if (!isDailyLimitExceeded) {
+                throw new BadRequestException('Günlük transfer limiti aşıldı');
+            }
+
+            if (!isWeeklyLimitExceeded) {
+                throw new BadRequestException('Haftalık transfer limiti aşıldı');
+            }
+
+            if (!isMonthlyLimitExceeded) {
+                throw new BadRequestException('Aylık transfer limiti aşıldı');
+            }
+
+            if (!isSingleTransactionLimitExceeded) {
+                throw new BadRequestException('Tek seferlik transfer limiti aşıldı');
+            }
+
+            // Para birimi dönüşümü
+            const convertedAmount = await this.exchangeService.convertAmount(
+                createTransactionDto.amount,
+                senderResult.rows[0].currency,
+                receiverResult.rows[0].currency
+            );
+
+            // Transaction kaydını veritabanına ekler, işlem ID'sini alır
             const transactionResult = await client.query(
                 `INSERT INTO transactions 
-                (sender_account_id, receiver_account_id, amount, description, status)
-                VALUES ($1, $2, $3, $4, 'completed')
+                (sender_id, receiver_id, amount, currency, status, description)
+                VALUES ($1, $2, $3, $4, 'completed', $5)
                 RETURNING id`,
                 [
-                    createTransactionDto.senderAccountId,
-                    createTransactionDto.receiverAccountId,
-                    createTransactionDto.amount,
+                    createTransactionDto.fromAccountId,
+                    createTransactionDto.toAccountId,
+                    convertedAmount,
+                    senderResult.rows[0].currency,
                     createTransactionDto.description
                 ]
             );
@@ -63,37 +104,36 @@ export class TransactionsService {
             // Gönderen hesabın bakiyesinden para düşer
             await client.query(
                 'UPDATE accounts SET balance = balance - $1 WHERE id = $2',
-                [createTransactionDto.amount, createTransactionDto.senderAccountId]
+                [createTransactionDto.amount, createTransactionDto.fromAccountId]
             );
 
             // Alıcı hesabın bakiyesine para ekler
             await client.query(
                 'UPDATE accounts SET balance = balance + $1 WHERE id = $2',
-                [createTransactionDto.amount, createTransactionDto.receiverAccountId]
+                [convertedAmount, createTransactionDto.toAccountId]
             );
 
             await client.query('COMMIT'); // İşlem bloğunu commitler
 
             // Audit servisine, bu işlemle ilgili log kaydı gönderir
-            await this.auditService.log(
-                'CREATE',
-                'transactions',
-                transactionId,
-                null,
-                {
-                    senderAccountId: createTransactionDto.senderAccountId,
-                    receiverAccountId: createTransactionDto.receiverAccountId,
+            await this.auditService.logAction({
+                userId: senderResult.rows[0].user_id,
+                action: 'TRANSFER',
+                details: {
+                    transactionId,
+                    fromAccount: createTransactionDto.fromAccountId,
+                    toAccount: createTransactionDto.toAccountId,
                     amount: createTransactionDto.amount,
-                    description: createTransactionDto.description,
-                    status: 'completed'
+                    currency: createTransactionDto.currency
                 }
-            );
+            });
 
             // İşlem başarılıysa, kullanıcıya bilgilendirici bir yanıt döner
             return {
-                transactionId,
+                id: transactionId,
                 status: 'completed',
-                message: 'Transfer successfully completed'
+                amount: convertedAmount,
+                currency: receiverResult.rows[0].currency
             };
 
         } catch (error) {
@@ -113,62 +153,22 @@ export class TransactionsService {
     }
 
     async getTransactions(getTransactionsDto: GetTransactionsDto) {
-        const { accountId, limit = 10, offset = 0 } = getTransactionsDto; // Gelen filtre ve sayfalama parametrelerini alır
-        // Hesaplar ile birlikte transaction listesini çeker
-        // - Hesapların kart numaralarını için LEFT JOIN kullanıyoruz
-        // - Tarihe göre sıralamak için ORDER BY kullanıyoruz
-        
-        let query = `
-            SELECT 
-                t.id,
-                t.sender_account_id as "senderAccountId",
-                t.receiver_account_id as "receiverAccountId",
-                t.amount,
-                t.description,
-                t.status,
-                t.created_at as "createdAt",
-                sa.card_number as "senderCardNumber",
-                ra.card_number as "receiverCardNumber"
+        const query = `
+            SELECT t.*, 
+                   a1.card_holder_name as sender_name,
+                   a2.card_holder_name as receiver_name
             FROM transactions t
-            LEFT JOIN accounts sa ON t.sender_account_id = sa.id
-            LEFT JOIN accounts ra ON t.receiver_account_id = ra.id
+            LEFT JOIN accounts a1 ON t.sender_id = a1.id
+            LEFT JOIN accounts a2 ON t.receiver_id = a2.id
+            WHERE t.sender_id = $1 OR t.receiver_id = $1
+            ORDER BY t.created_at DESC
+            LIMIT $2 OFFSET $3
         `;
-
-        const queryParams = [];
-        
-        // Eğer bir hesap ID’si verildiyse, hem gönderen hem alıcı olarak filtreler
-        if (accountId) {
-            query += ` WHERE t.sender_account_id = $1 OR t.receiver_account_id = $1`;
-            queryParams.push(accountId);
-        }
-
-        // Sonuçları tarihe göre sıralar, limit ve offset uygular
-        query += ` ORDER BY t.created_at DESC LIMIT $${queryParams.length + 1} OFFSET $${
-            queryParams.length + 2
-        }`;
-        
-        queryParams.push(limit, offset);
-
-        // Transaction listesini veritabanından çeker
-        const result = await this.databaseService.query(query, queryParams);
-        
-        // Toplam transaction sayısı
-        const countQuery = `
-            SELECT COUNT(*) as total
-            FROM transactions t
-            ${accountId ? 'WHERE t.sender_account_id = $1 OR t.receiver_account_id = $1' : ''}
-        `;
-
-        const countResult = await this.databaseService.query(
-            countQuery,
-            accountId ? [accountId] : []
-        );
-
-        return {
-            transactions: result.rows,
-            total: parseInt(countResult.rows[0].total),
-            limit,
-            offset
-        };
+        const values = [
+            getTransactionsDto.accountId,
+            getTransactionsDto.limit,
+            getTransactionsDto.offset
+        ];
+        return this.databaseService.query(query, values);
     }
 }

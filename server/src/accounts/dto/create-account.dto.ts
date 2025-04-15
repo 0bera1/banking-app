@@ -1,9 +1,30 @@
+import { IsString, IsNumber, IsOptional } from 'class-validator';
+
 // Account oluşturma için DTO
 export class CreateAccountDto {
-    card_number: string;
-    card_holder_name: string;
-    card_brand?: string;
-    card_issuer?: string;
-    card_type?: string;
-    initial_balance?: number;
+    @IsString()
+    cardNumber: string;
+
+    @IsString()
+    cardHolderName: string;
+
+    @IsString()
+    cardBrand: string;
+
+    @IsString()
+    cardIssuer: string;
+
+    @IsString()
+    cardType: string;
+
+    @IsNumber()
+    @IsOptional()
+    initialBalance?: number;
+
+    @IsNumber()
+    user_id: number;
+
+    @IsString()
+    @IsOptional()
+    currency?: string = 'TRY';
 } 

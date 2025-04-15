@@ -17,22 +17,32 @@ let UsersService = class UsersService {
         this.databaseService = databaseService;
     }
     async create(userData) {
-        const query = `
-            INSERT INTO users 
-            (username, email, password_hash, first_name, last_name, role)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *
-        `;
-        const values = [
-            userData.username,
-            userData.email,
-            userData.password_hash,
-            userData.first_name,
-            userData.last_name,
-            userData.role || 'user'
-        ];
-        const result = await this.databaseService.query(query, values);
-        return result.rows[0];
+        try {
+            console.log('Creating user with data:', userData);
+            const query = `
+                INSERT INTO users 
+                (username, email, password_hash, first_name, last_name, role)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
+            const values = [
+                userData.username,
+                userData.email,
+                userData.password_hash,
+                userData.first_name || '',
+                userData.last_name || '',
+                userData.role || 'user'
+            ];
+            console.log('Executing query:', query);
+            console.log('With values:', values);
+            const result = await this.databaseService.query(query, values);
+            console.log('Query result:', result);
+            return result.rows[0];
+        }
+        catch (error) {
+            console.error('Error in create:', error);
+            throw error;
+        }
     }
     async remove(id) {
         const query = 'DELETE FROM users WHERE id = $1';
@@ -42,7 +52,7 @@ let UsersService = class UsersService {
         const query = 'SELECT * FROM users WHERE id = $1';
         const result = await this.databaseService.query(query, [id]);
         if (!result.rows[0]) {
-            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
+            throw new common_1.NotFoundException('User not found');
         }
         return result.rows[0];
     }
@@ -63,7 +73,7 @@ let UsersService = class UsersService {
             }
         });
         if (fields.length === 0) {
-            throw new Error('Güncellenecek alan belirtilmedi');
+            throw new Error('No fields to update');
         }
         const query = `
             UPDATE users 
@@ -74,7 +84,7 @@ let UsersService = class UsersService {
         values.push(id);
         const result = await this.databaseService.query(query, values);
         if (!result.rows[0]) {
-            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
+            throw new common_1.NotFoundException('User not found');
         }
         return result.rows[0];
     }

@@ -8,6 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AuditModule } from './audit/audit.module';
+import { ExchangeModule } from './exchange/exchange.module';
+import { TransactionLimitsModule } from './transactions/transaction-limits.module';
 
 @Module({
   imports: [
@@ -19,7 +21,9 @@ import { AuditModule } from './audit/audit.module';
     AuthModule,
     AccountsModule,
     TransactionsModule,
-    AuditModule
+    AuditModule,
+    ExchangeModule,
+    TransactionLimitsModule
   ],
   // HTTP İstekleri buraya eklenecek
   controllers: [],
