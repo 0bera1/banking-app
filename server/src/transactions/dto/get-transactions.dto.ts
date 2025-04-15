@@ -1,11 +1,11 @@
 import { IsOptional, IsUUID, IsNumber, Min, Max } from 'class-validator';
 
 export class GetTransactionsDto {
-  @IsUUID()
-  @IsOptional()
-  accountId?: string;
+  @IsUUID() // UUID formatında bir ID
+  @IsOptional() // İsteğe bağlı alan
+  accountId?: string; 
 
-  @IsNumber()
+  @IsNumber() 
   @IsOptional()
   @Min(1)
   @Max(100)

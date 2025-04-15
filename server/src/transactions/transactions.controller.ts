@@ -7,7 +7,6 @@ import { GetTransactionsDto } from './dto/get-transactions.dto';
 export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) {}
 
-    // Yeni işlem oluşturma
     @Post()
     async create(@Body() createTransactionDto: CreateTransactionDto) {
         try {
@@ -16,7 +15,7 @@ export class TransactionsController {
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new HttpException('İşlem oluşturulurken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException('Transaction creation failed', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -28,7 +27,7 @@ export class TransactionsController {
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new HttpException('İşlemler alınırken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException('Transactions retrieval failed', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

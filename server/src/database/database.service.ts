@@ -1,17 +1,12 @@
-// NestJS'den gerekli servis decorator'ını import ediyoruz
 import { Injectable } from '@nestjs/common';
-// PostgreSQL bağlantı havuzu için pg modülünü import ediyoruz
 import { Pool, PoolClient } from 'pg';
 
-// @Injectable decorator'u ile servisi tanımlıyoruz
-// Bu decorator, bu servisin NestJS'in dependency injection sisteminde kullanılabileceğini belirtir
 @Injectable()
 export class DatabaseService {
-  // PostgreSQL bağlantı havuzunu tanımlıyoruz
+  // PostgreSQL bağlantı havuzu
   // Pool, veritabanı bağlantılarını yönetmek için kullanılır
   private pool: Pool;
 
-  // Constructor'da bağlantı havuzunu oluşturuyoruz
   constructor() {
     this.pool = new Pool({
       user: 'postgres', // PostgreSQL kullanıcı adı
@@ -34,7 +29,6 @@ export class DatabaseService {
     const duration = Date.now() - start;
     // Sorgu bilgilerini konsola yazdırıyoruz (debugging için)
     console.log('Executed query', { text, duration, rows: res.rowCount });
-    // Sonucu döndürüyoruz
     return res;
   }
 

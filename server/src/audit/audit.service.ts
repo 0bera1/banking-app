@@ -6,43 +6,49 @@ import { AuditLog } from './entities/audit-log.entity';
 export class AuditService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  // log() metodu, bir işlem gerçekleştiğinde bu işlemi audit_logs tablosuna kaydeder.
   async log(
-    action: string,
-    tableName: string,
-    recordId: string,
-    oldData?: Record<string, any>,
-    newData?: Record<string, any>,
-    userId?: string,
-    ipAddress?: string,
-    userAgent?: string,
+    action: string, // işlem tipi (CREATE, UPDATE, DELETE)
+    tableName: string, // işlem yapılan tablo adı
+    recordId: string, // işlem yapılan kaydın ID'si
+    oldData?: Record<string, any>, // Eski veri
+    newData?: Record<string, any>, // Yeni veri
+    userId?: string, // kullanıcının ID'si
+    ipAddress?: string, //  IP adresi
+    userAgent?: string, // cihaz bilgisi
   ): Promise<void> {
+    // Audit log kaydı için SQL sorgusu hazırlanıyor.
     const query = `
       INSERT INTO audit_logs 
       (action, table_name, record_id, old_data, new_data, user_id, ip_address, user_agent)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     `;
 
+    // Parametreler sırayla diziye ekleniyor.
     await this.databaseService.query(query, [
       action,
       tableName,
       recordId,
-      oldData ? JSON.stringify(oldData) : null,
-      newData ? JSON.stringify(newData) : null,
+      oldData ? JSON.stringify(oldData) : null,  // oldData varsa JSON string olarak kaydedilir, yoksa null.
+      newData ? JSON.stringify(newData) : null,  // newData   "     "     "     "       "           "   ""
       userId,
       ipAddress,
       userAgent,
     ]);
   }
 
+  // getLogs() metodu, audit_logs tablosundan işlem geçmişlerini getirir.
   async getLogs(
     tableName?: string,
     recordId?: string,
     action?: string,
-    startDate?: Date,
+    startDate?: Date, 
     endDate?: Date,
     limit: number = 100,
     offset: number = 0,
-  ): Promise<{ logs: AuditLog[]; total: number }> {
+  ): Promise<{ logs: AuditLog[]; total: number }> { 
+
+    // Dinamik olarak filtre eklemek için başlangıç sorgusu.
     let query = `
       SELECT 
         id,
@@ -59,49 +65,58 @@ export class AuditService {
       WHERE 1=1
     `;
 
-    const params = [];
-    let paramIndex = 1;
+    const params = []; 
+    let paramIndex = 1; 
 
+    // Eğer tableName gönderildiyse, filtreye eklenir.
     if (tableName) {
       query += ` AND table_name = $${paramIndex}`;
       params.push(tableName);
       paramIndex++;
     }
 
+    // Eğer recordId gönderildiyse, filtreye eklenir.
     if (recordId) {
       query += ` AND record_id = $${paramIndex}`;
       params.push(recordId);
       paramIndex++;
     }
 
+    // Eğer action gönderildiyse, filtreye eklenir.
     if (action) {
       query += ` AND action = $${paramIndex}`;
       params.push(action);
       paramIndex++;
     }
 
+    // Eğer startDate gönderildiyse, filtreye eklenir.
     if (startDate) {
       query += ` AND created_at >= $${paramIndex}`;
       params.push(startDate);
       paramIndex++;
     }
 
+    // Eğer endDate gönderildiyse, filtreye eklenir.
     if (endDate) {
       query += ` AND created_at <= $${paramIndex}`;
       params.push(endDate);
       paramIndex++;
     }
 
-    // Toplam kayıt sayısını al
+    // Toplam kayıt sayısını öğrenmek için sorgunun SELECT kısmı değiştirilir.
     const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM');
+
+    // Toplam sayıyı veritabanından çeker.
     const countResult = await this.databaseService.query(countQuery, params);
 
-    // Sayfalama ekle
+    // Sonuçları sıralayıp, sayfalama işlemi için LIMIT ve OFFSET eklenir.
     query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
+    params.push(limit, offset); // Limit ve offset parametre olarak eklenir.
 
+    // Log verileri veritabanından çekilir.
     const result = await this.databaseService.query(query, params);
 
+    // Sonuçlar JSON parse
     return {
       logs: result.rows.map(row => ({
         ...row,
@@ -111,4 +126,4 @@ export class AuditService {
       total: parseInt(countResult.rows[0].total),
     };
   }
-} 
+}

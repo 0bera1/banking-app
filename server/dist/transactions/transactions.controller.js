@@ -29,7 +29,7 @@ let TransactionsController = class TransactionsController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('İşlem oluşturulurken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Transaction creation failed', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async getTransactions(getTransactionsDto) {
@@ -40,7 +40,7 @@ let TransactionsController = class TransactionsController {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('İşlemler alınırken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('Transactions retrieval failed', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };

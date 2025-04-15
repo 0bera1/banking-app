@@ -9,9 +9,7 @@ import { AccountsModule } from './accounts/accounts.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AuditModule } from './audit/audit.module';
 
-// @Module decorator'u ile ana uygulama modülünü tanımlıyoruz
 @Module({
-  // imports: Uygulamanın ihtiyaç duyduğu diğer modülleri buraya ekliyoruz
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
@@ -23,9 +21,9 @@ import { AuditModule } from './audit/audit.module';
     TransactionsModule,
     AuditModule
   ],
-  // controllers: HTTP isteklerini işleyecek controller'ları buraya ekliyoruz
+  // HTTP İstekleri buraya eklenecek
   controllers: [],
-  // providers: Servisleri ve diğer sağlayıcıları buraya ekliyoruz
+  // providers: Servisleri ve diğer sağlayıcılar
   providers: [],
 })
 export class AppModule {}

@@ -2,36 +2,36 @@ import { IsNotEmpty, IsNumber, IsUUID, Min } from 'class-validator';
 
 // Transaction oluşturma için DTO
 export class CreateTransactionDto {
-    @IsUUID()
-    @IsNotEmpty()
+    @IsUUID() // UUID formatında bir ID
+    @IsNotEmpty() // Zorunlu alan
     senderAccountId: string;
 
     @IsUUID()
     @IsNotEmpty()
-    receiverAccountId: string;
+    receiverAccountId: string; // Alıcı hesap ID'si
 
     @IsNumber()
     @IsNotEmpty()
-    @Min(0.01)
-    amount: number;
+    @Min(0.01) // Minimum değer
+    amount: number; // İşlem miktarı
 
     @IsNotEmpty()
-    description: string;
+    description: string; // İşlem açıklaması
 
-    transaction_type: string;
-    card_brand?: string;
-    card_issuer?: string;
-    card_type?: string;
-    card_holder_name?: string;
-    transaction_category?: string;
-    transaction_method?: string;
-    is_refund?: boolean;
-    currency_code?: string;
-    authorization_code?: string;
-    merchant_name?: string;
-    merchant_address?: string;
-    email?: string;
-    phone?: string;
-    device_type?: string;
-    some_field?: string;
+    transaction_type: string; // İşlem türü
+    card_brand?: string; // Kart markası
+    card_issuer?: string; // Kart yayıncısı
+    card_type?: string; // Kart türü
+    card_holder_name?: string; // Kart sahibi adı
+    transaction_category?: string; // İşlem kategorisi
+    transaction_method?: string; // Ödeme yöntemi: online, pos, etc.
+    is_refund?: boolean; // İade işlemi olup olmadığı
+    currency_code?: string; // Para birimi kodu
+    authorization_code?: string; // Yetkilendirme kodu
+    merchant_name?: string; // Ticari tesis adı
+    merchant_address?: string; // Ticari tesis adresi
+    email?: string; // Müşteri e-posta adresi
+    phone?: string; // Müşteri telefon numarası
+    device_type?: string; // Cihaz türü
+    some_field?: string; // İsteğe bağlı alan
 } 

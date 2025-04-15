@@ -24,15 +24,15 @@ let TransactionsService = class TransactionsService {
             await client.query('BEGIN');
             const senderResult = await client.query('SELECT balance FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.senderAccountId]);
             if (senderResult.rows.length === 0) {
-                throw new common_1.NotFoundException('Gönderen hesap bulunamadı');
+                throw new common_1.NotFoundException('Sender account not found');
             }
             const senderBalance = parseFloat(senderResult.rows[0].balance);
             if (senderBalance < createTransactionDto.amount) {
-                throw new common_1.BadRequestException('Yetersiz bakiye');
+                throw new common_1.BadRequestException('Insufficient balance');
             }
             const receiverResult = await client.query('SELECT id FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.receiverAccountId]);
             if (receiverResult.rows.length === 0) {
-                throw new common_1.NotFoundException('Alıcı hesap bulunamadı');
+                throw new common_1.NotFoundException('Receiver account not found');
             }
             const transactionResult = await client.query(`INSERT INTO transactions 
                 (sender_account_id, receiver_account_id, amount, description, status)
@@ -57,7 +57,7 @@ let TransactionsService = class TransactionsService {
             return {
                 transactionId,
                 status: 'completed',
-                message: 'Transfer başarıyla tamamlandı'
+                message: 'Transfer successfully completed'
             };
         }
         catch (error) {
@@ -66,7 +66,7 @@ let TransactionsService = class TransactionsService {
             if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException) {
                 throw error;
             }
-            throw new common_1.BadRequestException('İşlem oluşturulurken bir hata oluştu: ' + error.message);
+            throw new common_1.BadRequestException('Transaction creation failed: ' + error.message);
         }
         finally {
             client.release();
