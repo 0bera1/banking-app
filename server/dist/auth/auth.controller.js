@@ -38,7 +38,7 @@ let AuthController = class AuthController {
     }
     async register(userData) {
         try {
-            const user = await this.authService.register(userData.username, userData.email, userData.password);
+            const user = await this.authService.register(userData.username, userData.email, userData.password, userData.first_name, userData.last_name);
             return this.authService.login(user);
         }
         catch (error) {

@@ -17,6 +17,8 @@ const transactions_module_1 = require("./transactions/transactions.module");
 const audit_module_1 = require("./audit/audit.module");
 const exchange_module_1 = require("./exchange/exchange.module");
 const transaction_limits_module_1 = require("./transactions/transaction-limits.module");
+const app_controller_1 = require("./app.controller");
+const app_service_1 = require("./app.service");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -35,8 +37,8 @@ exports.AppModule = AppModule = __decorate([
             exchange_module_1.ExchangeModule,
             transaction_limits_module_1.TransactionLimitsModule
         ],
-        controllers: [],
-        providers: [],
+        controllers: [app_controller_1.AppController],
+        providers: [app_service_1.AppService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

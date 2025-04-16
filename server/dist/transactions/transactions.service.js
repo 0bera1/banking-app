@@ -22,80 +22,68 @@ let TransactionsService = class TransactionsService {
         this.auditService = auditService;
         this.transactionLimitsService = transactionLimitsService;
     }
-    async createTransaction(createTransactionDto) {
+    async createTransaction(userId, fromAccountId, receiverIban, amount, currency, description) {
+        const fromAccountQuery = `
+            SELECT * FROM accounts 
+            WHERE id = $1 AND user_id = $2
+        `;
+        const fromAccountResult = await this.databaseService.query(fromAccountQuery, [fromAccountId, userId]);
+        const fromAccount = fromAccountResult.rows[0];
+        if (!fromAccount) {
+            throw new common_1.HttpException('Gönderen hesap bulunamadı', common_1.HttpStatus.NOT_FOUND);
+        }
+        const toAccountQuery = `
+            SELECT * FROM accounts 
+            WHERE iban = $1
+        `;
+        const toAccountResult = await this.databaseService.query(toAccountQuery, [receiverIban]);
+        const toAccount = toAccountResult.rows[0];
+        if (!toAccount) {
+            throw new common_1.HttpException('Alıcı hesap bulunamadı', common_1.HttpStatus.NOT_FOUND);
+        }
+        if (fromAccount.balance < amount) {
+            throw new common_1.HttpException('Yetersiz bakiye', common_1.HttpStatus.BAD_REQUEST);
+        }
+        if (fromAccount.currency !== currency || toAccount.currency !== currency) {
+            throw new common_1.HttpException('Para birimi uyuşmazlığı', common_1.HttpStatus.BAD_REQUEST);
+        }
         const client = await this.databaseService.getClient();
         try {
             await client.query('BEGIN');
-            const senderResult = await client.query('SELECT balance, currency, user_id FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.fromAccountId]);
-            if (senderResult.rows.length === 0) {
-                throw new common_1.NotFoundException('Sender account not found');
-            }
-            const senderBalance = parseFloat(senderResult.rows[0].balance);
-            if (senderBalance < createTransactionDto.amount) {
-                throw new common_1.BadRequestException('Insufficient balance');
-            }
-            const receiverResult = await client.query('SELECT id, currency FROM accounts WHERE id = $1 FOR UPDATE', [createTransactionDto.toAccountId]);
-            if (receiverResult.rows.length === 0) {
-                throw new common_1.NotFoundException('Receiver account not found');
-            }
-            const [isDailyLimitExceeded, isWeeklyLimitExceeded, isMonthlyLimitExceeded, isSingleTransactionLimitExceeded,] = await Promise.all([
-                this.transactionLimitsService.checkDailyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
-                this.transactionLimitsService.checkWeeklyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
-                this.transactionLimitsService.checkMonthlyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
-                this.transactionLimitsService.checkSingleTransactionLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+            const updateFromAccountQuery = `
+                UPDATE accounts 
+                SET balance = balance - $1 
+                WHERE id = $2 
+                RETURNING *
+            `;
+            await client.query(updateFromAccountQuery, [amount, fromAccountId]);
+            const updateToAccountQuery = `
+                UPDATE accounts 
+                SET balance = balance + $1 
+                WHERE id = $2 
+                RETURNING *
+            `;
+            await client.query(updateToAccountQuery, [amount, toAccount.id]);
+            const createTransactionQuery = `
+                INSERT INTO transactions 
+                (sender_id, receiver_id, amount, currency, description, status)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
+            const transactionResult = await client.query(createTransactionQuery, [
+                fromAccountId,
+                toAccount.id,
+                amount,
+                currency,
+                description,
+                'completed'
             ]);
-            if (!isDailyLimitExceeded) {
-                throw new common_1.BadRequestException('Günlük transfer limiti aşıldı');
-            }
-            if (!isWeeklyLimitExceeded) {
-                throw new common_1.BadRequestException('Haftalık transfer limiti aşıldı');
-            }
-            if (!isMonthlyLimitExceeded) {
-                throw new common_1.BadRequestException('Aylık transfer limiti aşıldı');
-            }
-            if (!isSingleTransactionLimitExceeded) {
-                throw new common_1.BadRequestException('Tek seferlik transfer limiti aşıldı');
-            }
-            const convertedAmount = await this.exchangeService.convertAmount(createTransactionDto.amount, senderResult.rows[0].currency, receiverResult.rows[0].currency);
-            const transactionResult = await client.query(`INSERT INTO transactions 
-                (sender_id, receiver_id, amount, currency, status, description)
-                VALUES ($1, $2, $3, $4, 'completed', $5)
-                RETURNING id`, [
-                createTransactionDto.fromAccountId,
-                createTransactionDto.toAccountId,
-                convertedAmount,
-                senderResult.rows[0].currency,
-                createTransactionDto.description
-            ]);
-            const transactionId = transactionResult.rows[0].id;
-            await client.query('UPDATE accounts SET balance = balance - $1 WHERE id = $2', [createTransactionDto.amount, createTransactionDto.fromAccountId]);
-            await client.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2', [convertedAmount, createTransactionDto.toAccountId]);
             await client.query('COMMIT');
-            await this.auditService.logAction({
-                userId: senderResult.rows[0].user_id,
-                action: 'TRANSFER',
-                details: {
-                    transactionId,
-                    fromAccount: createTransactionDto.fromAccountId,
-                    toAccount: createTransactionDto.toAccountId,
-                    amount: createTransactionDto.amount,
-                    currency: createTransactionDto.currency
-                }
-            });
-            return {
-                id: transactionId,
-                status: 'completed',
-                amount: convertedAmount,
-                currency: receiverResult.rows[0].currency
-            };
+            return transactionResult.rows[0];
         }
         catch (error) {
             await client.query('ROLLBACK');
-            console.error('Transaction error:', error);
-            if (error instanceof common_1.NotFoundException || error instanceof common_1.BadRequestException) {
-                throw error;
-            }
-            throw new common_1.BadRequestException('Transaction creation failed: ' + error.message);
+            throw error;
         }
         finally {
             client.release();
@@ -119,6 +107,29 @@ let TransactionsService = class TransactionsService {
             getTransactionsDto.offset
         ];
         return this.databaseService.query(query, values);
+    }
+    async getTransactionsByUserId(userId) {
+        try {
+            const query = `
+                SELECT 
+                    t.*,
+                    s.first_name || ' ' || s.last_name as sender_name,
+                    r.first_name || ' ' || r.last_name as receiver_name
+                FROM transactions t
+                LEFT JOIN accounts sa ON t.sender_id = sa.id
+                LEFT JOIN accounts ra ON t.receiver_id = ra.id
+                LEFT JOIN users s ON sa.user_id = s.id
+                LEFT JOIN users r ON ra.user_id = r.id
+                WHERE sa.user_id = $1 OR ra.user_id = $1
+                ORDER BY t.created_at DESC
+            `;
+            const result = await this.databaseService.query(query, [userId]);
+            return result.rows;
+        }
+        catch (error) {
+            console.error('İşlemler getirilirken hata:', error);
+            throw new common_1.HttpException('İşlemler getirilirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 };
 exports.TransactionsService = TransactionsService;

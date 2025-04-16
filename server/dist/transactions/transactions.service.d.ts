@@ -1,5 +1,4 @@
 import { DatabaseService } from '../database/database.service';
-import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsDto } from './dto/get-transactions.dto';
 import { ExchangeService } from '../exchange/exchange.service';
 import { AuditService } from '../audit/audit.service';
@@ -10,11 +9,7 @@ export declare class TransactionsService {
     private readonly auditService;
     private readonly transactionLimitsService;
     constructor(databaseService: DatabaseService, exchangeService: ExchangeService, auditService: AuditService, transactionLimitsService: TransactionLimitsService);
-    createTransaction(createTransactionDto: CreateTransactionDto): Promise<{
-        id: any;
-        status: string;
-        amount: number;
-        currency: any;
-    }>;
+    createTransaction(userId: number, fromAccountId: number, receiverIban: string, amount: number, currency: string, description?: string): Promise<any>;
     getTransactions(getTransactionsDto: GetTransactionsDto): Promise<any>;
+    getTransactionsByUserId(userId: number): Promise<any>;
 }

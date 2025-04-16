@@ -30,15 +30,17 @@ let AuthService = class AuthService {
         this.usersService = usersService;
         this.jwtService = jwtService;
     }
-    async register(username, email, password) {
+    async register(username, email, password, first_name, last_name) {
         try {
-            console.log('Registering user:', { username, email });
+            console.log('Registering user:', { username, email, first_name, last_name });
             const hashedPassword = await this.hashPassword(password);
             console.log('Password hashed successfully');
             const user = await this.usersService.create({
                 username,
                 email,
                 password_hash: hashedPassword,
+                first_name,
+                last_name
             });
             console.log('User created successfully:', user);
             const { password_hash } = user, result = __rest(user, ["password_hash"]);

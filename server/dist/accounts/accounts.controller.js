@@ -17,9 +17,11 @@ const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("./accounts.service");
 const create_account_dto_1 = require("./dto/create-account.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const users_service_1 = require("../users/users.service");
 let AccountsController = class AccountsController {
-    constructor(accountsService) {
+    constructor(accountsService, usersService) {
         this.accountsService = accountsService;
+        this.usersService = usersService;
     }
     async create(req, createAccountDto) {
         try {
@@ -28,6 +30,9 @@ let AccountsController = class AccountsController {
         catch (error) {
             if (error.code === '23505') {
                 throw new common_1.HttpException('Bu kart numarası zaten kullanımda', common_1.HttpStatus.CONFLICT);
+            }
+            if (error instanceof common_1.NotFoundException) {
+                throw error;
             }
             throw new common_1.HttpException('Hesap oluşturulurken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -74,6 +79,21 @@ let AccountsController = class AccountsController {
     }
     getBalance(id, currency) {
         return this.accountsService.getBalance(+id, currency);
+    }
+    async verifyIban(iban) {
+        const account = await this.accountsService.findByIban(iban);
+        if (!account) {
+            throw new common_1.NotFoundException('Hesap bulunamadı');
+        }
+        const user = await this.usersService.findOne(account.user_id);
+        if (!user) {
+            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
+        }
+        return {
+            iban: account.iban,
+            first_name: user.first_name,
+            last_name: user.last_name
+        };
     }
 };
 exports.AccountsController = AccountsController;
@@ -140,9 +160,17 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", void 0)
 ], AccountsController.prototype, "getBalance", null);
+__decorate([
+    (0, common_1.Get)('verify-iban/:iban'),
+    __param(0, (0, common_1.Param)('iban')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "verifyIban", null);
 exports.AccountsController = AccountsController = __decorate([
     (0, common_1.Controller)('accounts'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [accounts_service_1.AccountsService])
+    __metadata("design:paramtypes", [accounts_service_1.AccountsService,
+        users_service_1.UsersService])
 ], AccountsController);
 //# sourceMappingURL=accounts.controller.js.map

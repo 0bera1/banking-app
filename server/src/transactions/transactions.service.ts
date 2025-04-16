@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsDto } from './dto/get-transactions.dto';
@@ -9,146 +9,103 @@ import { TransactionLimitsService } from './transaction-limits.service';
 @Injectable()
 export class TransactionsService {
     constructor(
-        private readonly databaseService: DatabaseService,  // Veritabanı bağlantısı için servis
+        private readonly databaseService: DatabaseService,
         private readonly exchangeService: ExchangeService,
-        private readonly auditService: AuditService,        // İşlem kayıtları için audit servisi
+        private readonly auditService: AuditService,
         private readonly transactionLimitsService: TransactionLimitsService,
     ) {}
 
-    async createTransaction(createTransactionDto: CreateTransactionDto) {
-        const client = await this.databaseService.getClient(); // Veritabanından bir client (bağlantı) alır
-        
+    async createTransaction(
+        userId: number,
+        fromAccountId: number,
+        receiverIban: string,
+        amount: number,
+        currency: string,
+        description?: string,
+    ) {
+        // Gönderen hesabı kontrol et
+        const fromAccountQuery = `
+            SELECT * FROM accounts 
+            WHERE id = $1 AND user_id = $2
+        `;
+        const fromAccountResult = await this.databaseService.query(fromAccountQuery, [fromAccountId, userId]);
+        const fromAccount = fromAccountResult.rows[0];
+
+        if (!fromAccount) {
+            throw new HttpException('Gönderen hesap bulunamadı', HttpStatus.NOT_FOUND);
+        }
+
+        // Alıcı hesabı IBAN ile bul
+        const toAccountQuery = `
+            SELECT * FROM accounts 
+            WHERE iban = $1
+        `;
+        const toAccountResult = await this.databaseService.query(toAccountQuery, [receiverIban]);
+        const toAccount = toAccountResult.rows[0];
+
+        if (!toAccount) {
+            throw new HttpException('Alıcı hesap bulunamadı', HttpStatus.NOT_FOUND);
+        }
+
+        // Bakiye kontrolü
+        if (fromAccount.balance < amount) {
+            throw new HttpException('Yetersiz bakiye', HttpStatus.BAD_REQUEST);
+        }
+
+        // Para birimi kontrolü
+        if (fromAccount.currency !== currency || toAccount.currency !== currency) {
+            throw new HttpException(
+                'Para birimi uyuşmazlığı',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        // Transaction başlat
+        const client = await this.databaseService.getClient();
         try {
-            await client.query('BEGIN'); // Transaction (işlem bloğu) başlatılır
+            await client.query('BEGIN');
 
-            // Gönderen hesabın bakiyesini kontrol eder
-            const senderResult = await client.query(
-                'SELECT balance, currency, user_id FROM accounts WHERE id = $1 FOR UPDATE',
-                [createTransactionDto.fromAccountId]
-            );
+            // Gönderen hesabın bakiyesini güncelle
+            const updateFromAccountQuery = `
+                UPDATE accounts 
+                SET balance = balance - $1 
+                WHERE id = $2 
+                RETURNING *
+            `;
+            await client.query(updateFromAccountQuery, [amount, fromAccountId]);
 
-            // Eğer gönderen hesap bulunamadıysa
-            if (senderResult.rows.length === 0) {
-                throw new NotFoundException('Sender account not found');
-            }
+            // Alıcı hesabın bakiyesini güncelle
+            const updateToAccountQuery = `
+                UPDATE accounts 
+                SET balance = balance + $1 
+                WHERE id = $2 
+                RETURNING *
+            `;
+            await client.query(updateToAccountQuery, [amount, toAccount.id]);
 
-            const senderBalance = parseFloat(senderResult.rows[0].balance);
-            // Gönderen hesabın bakiyesi, gönderilecek tutardan azsa işlem iptal edilir
-            if (senderBalance < createTransactionDto.amount) {
-                throw new BadRequestException('Insufficient balance');
-            }
-
-            // Alıcı hesabın varlığını kontrol eder
-            const receiverResult = await client.query(
-                'SELECT id, currency FROM accounts WHERE id = $1 FOR UPDATE',
-                [createTransactionDto.toAccountId]
-            );
-
-            if (receiverResult.rows.length === 0) {
-                throw new NotFoundException('Receiver account not found');
-            }
-
-            // Transaction limitlerini kontrol et
-            const [
-                isDailyLimitExceeded,
-                isWeeklyLimitExceeded,
-                isMonthlyLimitExceeded,
-                isSingleTransactionLimitExceeded,
-            ] = await Promise.all([
-                this.transactionLimitsService.checkDailyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
-                this.transactionLimitsService.checkWeeklyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
-                this.transactionLimitsService.checkMonthlyLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
-                this.transactionLimitsService.checkSingleTransactionLimit(senderResult.rows[0].user_id, createTransactionDto.amount, senderResult.rows[0].currency),
+            // İşlem kaydını oluştur
+            const createTransactionQuery = `
+                INSERT INTO transactions 
+                (sender_id, receiver_id, amount, currency, description, status)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
+            const transactionResult = await client.query(createTransactionQuery, [
+                fromAccountId,
+                toAccount.id,
+                amount,
+                currency,
+                description,
+                'completed'
             ]);
 
-            if (!isDailyLimitExceeded) {
-                throw new BadRequestException('Günlük transfer limiti aşıldı');
-            }
-
-            if (!isWeeklyLimitExceeded) {
-                throw new BadRequestException('Haftalık transfer limiti aşıldı');
-            }
-
-            if (!isMonthlyLimitExceeded) {
-                throw new BadRequestException('Aylık transfer limiti aşıldı');
-            }
-
-            if (!isSingleTransactionLimitExceeded) {
-                throw new BadRequestException('Tek seferlik transfer limiti aşıldı');
-            }
-
-            // Para birimi dönüşümü
-            const convertedAmount = await this.exchangeService.convertAmount(
-                createTransactionDto.amount,
-                senderResult.rows[0].currency,
-                receiverResult.rows[0].currency
-            );
-
-            // Transaction kaydını veritabanına ekler, işlem ID'sini alır
-            const transactionResult = await client.query(
-                `INSERT INTO transactions 
-                (sender_id, receiver_id, amount, currency, status, description)
-                VALUES ($1, $2, $3, $4, 'completed', $5)
-                RETURNING id`,
-                [
-                    createTransactionDto.fromAccountId,
-                    createTransactionDto.toAccountId,
-                    convertedAmount,
-                    senderResult.rows[0].currency,
-                    createTransactionDto.description
-                ]
-            );
-
-            const transactionId = transactionResult.rows[0].id;
-
-            // Gönderen hesabın bakiyesinden para düşer
-            await client.query(
-                'UPDATE accounts SET balance = balance - $1 WHERE id = $2',
-                [createTransactionDto.amount, createTransactionDto.fromAccountId]
-            );
-
-            // Alıcı hesabın bakiyesine para ekler
-            await client.query(
-                'UPDATE accounts SET balance = balance + $1 WHERE id = $2',
-                [convertedAmount, createTransactionDto.toAccountId]
-            );
-
-            await client.query('COMMIT'); // İşlem bloğunu commitler
-
-            // Audit servisine, bu işlemle ilgili log kaydı gönderir
-            await this.auditService.logAction({
-                userId: senderResult.rows[0].user_id,
-                action: 'TRANSFER',
-                details: {
-                    transactionId,
-                    fromAccount: createTransactionDto.fromAccountId,
-                    toAccount: createTransactionDto.toAccountId,
-                    amount: createTransactionDto.amount,
-                    currency: createTransactionDto.currency
-                }
-            });
-
-            // İşlem başarılıysa, kullanıcıya bilgilendirici bir yanıt döner
-            return {
-                id: transactionId,
-                status: 'completed',
-                amount: convertedAmount,
-                currency: receiverResult.rows[0].currency
-            };
-
+            await client.query('COMMIT');
+            return transactionResult.rows[0];
         } catch (error) {
-            await client.query('ROLLBACK'); // Hata olursa iptal (parayı düşürme/ekleme iptal olur)
-            console.error('Transaction error:', error);
-
-            // Eğer hata daha önce benim yazdığım hatalardan biri ise tekrar aynı hatayı ver
-            if (error instanceof NotFoundException || error instanceof BadRequestException) {
-                throw error;
-            }
-
-            // Eğer hata benim yazdığım hatalardan biri değilse yeni bir hata oluştur
-            throw new BadRequestException('Transaction creation failed: ' + error.message);
+            await client.query('ROLLBACK');
+            throw error;
         } finally {
-            client.release(); // Veritabanı bağlantısını serbest bırakır
+            client.release();
         }
     }
 
@@ -170,5 +127,29 @@ export class TransactionsService {
             getTransactionsDto.offset
         ];
         return this.databaseService.query(query, values);
+    }
+
+    async getTransactionsByUserId(userId: number) {
+        try {
+            const query = `
+                SELECT 
+                    t.*,
+                    s.first_name || ' ' || s.last_name as sender_name,
+                    r.first_name || ' ' || r.last_name as receiver_name
+                FROM transactions t
+                LEFT JOIN accounts sa ON t.sender_id = sa.id
+                LEFT JOIN accounts ra ON t.receiver_id = ra.id
+                LEFT JOIN users s ON sa.user_id = s.id
+                LEFT JOIN users r ON ra.user_id = r.id
+                WHERE sa.user_id = $1 OR ra.user_id = $1
+                ORDER BY t.created_at DESC
+            `;
+            
+            const result = await this.databaseService.query(query, [userId]);
+            return result.rows;
+        } catch (error) {
+            console.error('İşlemler getirilirken hata:', error);
+            throw new HttpException('İşlemler getirilirken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

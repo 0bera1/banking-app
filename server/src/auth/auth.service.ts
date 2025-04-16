@@ -11,15 +11,17 @@ export class AuthService {
     ) {}
 
     // Kullanıcı kaydı
-    async register(username: string, email: string, password: string) {
+    async register(username: string, email: string, password: string, first_name: string, last_name: string) {
         try {
-            console.log('Registering user:', { username, email });
+            console.log('Registering user:', { username, email, first_name, last_name });
             const hashedPassword = await this.hashPassword(password);
             console.log('Password hashed successfully');
             const user = await this.usersService.create({
                 username,
                 email,
                 password_hash: hashedPassword,
+                first_name,
+                last_name
             });
             console.log('User created successfully:', user);
             

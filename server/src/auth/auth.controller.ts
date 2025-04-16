@@ -31,12 +31,14 @@ export class AuthController {
 
     // Kayıt işlemi
     @Post('register')
-    async register(@Body() userData: { username: string; email: string; password: string }) {
+    async register(@Body() userData: { username: string; email: string; password: string; first_name: string; last_name: string }) {
         try {
             const user = await this.authService.register(
                 userData.username,
                 userData.email,
-                userData.password
+                userData.password,
+                userData.first_name,
+                userData.last_name
             );
             
             return this.authService.login(user);

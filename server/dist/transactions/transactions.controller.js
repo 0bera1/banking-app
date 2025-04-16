@@ -16,48 +16,41 @@ exports.TransactionsController = void 0;
 const common_1 = require("@nestjs/common");
 const transactions_service_1 = require("./transactions.service");
 const create_transaction_dto_1 = require("./dto/create-transaction.dto");
-const get_transactions_dto_1 = require("./dto/get-transactions.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let TransactionsController = class TransactionsController {
     constructor(transactionsService) {
         this.transactionsService = transactionsService;
     }
-    async create(createTransactionDto) {
-        try {
-            return await this.transactionsService.createTransaction(createTransactionDto);
-        }
-        catch (error) {
-            if (error instanceof common_1.HttpException) {
-                throw error;
-            }
-            throw new common_1.HttpException('Transaction creation failed', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    async create(req, createTransactionDto) {
+        return await this.transactionsService.createTransaction(req.user.id, createTransactionDto.senderAccountId, createTransactionDto.receiverIban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
     }
-    async getTransactions(getTransactionsDto) {
+    async getTransactions(req) {
         try {
-            return await this.transactionsService.getTransactions(getTransactionsDto);
+            const userId = req.user.id;
+            return await this.transactionsService.getTransactionsByUserId(userId);
         }
         catch (error) {
             if (error instanceof common_1.HttpException) {
                 throw error;
             }
-            throw new common_1.HttpException('Transactions retrieval failed', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new common_1.HttpException('İşlemler getirilirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };
 exports.TransactionsController = TransactionsController;
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_transaction_dto_1.CreateTransactionDto]),
+    __metadata("design:paramtypes", [Object, create_transaction_dto_1.CreateTransactionDto]),
     __metadata("design:returntype", Promise)
 ], TransactionsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)()),
+    __param(0, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [get_transactions_dto_1.GetTransactionsDto]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TransactionsController.prototype, "getTransactions", null);
 exports.TransactionsController = TransactionsController = __decorate([

@@ -8,6 +8,9 @@ export declare class AccountsService {
     private readonly usersService;
     private readonly exchangeService;
     constructor(databaseService: DatabaseService, usersService: UsersService, exchangeService: ExchangeService);
+    private generateIban;
+    private isIbanUnique;
+    private generateUniqueIban;
     create(createAccountDto: CreateAccountDto & {
         user_id: number;
     }): Promise<Account>;
@@ -24,4 +27,5 @@ export declare class AccountsService {
         balance: number;
         currency: string;
     }>;
+    findByIban(iban: string): Promise<Account>;
 }

@@ -13,6 +13,30 @@ export class AccountsService {
         private readonly exchangeService: ExchangeService
     ) {}
 
+    private generateIban(): string {
+        // TR + 24 haneli rastgele sayı
+        const randomNumber = Math.floor(Math.random() * 1000000000000000000000000).toString().padStart(24, '0');
+        return `TR${randomNumber}`;
+    }
+
+    private async isIbanUnique(iban: string): Promise<boolean> {
+        const query = 'SELECT COUNT(*) FROM accounts WHERE iban = $1';
+        const result = await this.databaseService.query(query, [iban]);
+        return result.rows[0].count === '0';
+    }
+
+    private async generateUniqueIban(): Promise<string> {
+        let iban: string;
+        let isUnique = false;
+
+        while (!isUnique) {
+            iban = this.generateIban();
+            isUnique = await this.isIbanUnique(iban);
+        }
+
+        return iban;
+    }
+
     // Yeni hesap oluşturma
     async create(createAccountDto: CreateAccountDto & { user_id: number }): Promise<Account> {
         try {
@@ -24,10 +48,13 @@ export class AccountsService {
                 throw new NotFoundException('Kullanıcı bulunamadı');
             }
 
+            // Benzersiz IBAN oluştur
+            const iban = await this.generateUniqueIban();
+
             const query = `
                 INSERT INTO accounts 
-                (card_number, card_holder_name, card_brand, card_issuer, card_type, balance, user_id, currency)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                (card_number, card_holder_name, card_brand, card_issuer, card_type, balance, user_id, currency, iban)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING *
             `;
             
@@ -39,7 +66,8 @@ export class AccountsService {
                 createAccountDto.cardType,
                 createAccountDto.initialBalance || 0,
                 createAccountDto.user_id,
-                createAccountDto.currency || 'TRY'
+                createAccountDto.currency || 'TRY',
+                iban
             ];
 
             console.log('Executing query:', query);
@@ -50,6 +78,9 @@ export class AccountsService {
             console.log('Query result:', result);
             return result.rows[0];
         } catch (error) {
+            if (error.code === '23505') { // Unique constraint violation
+                throw new BadRequestException('Bu kart numarası zaten kullanımda');
+            }
             console.error('Error in create:', error);
             throw error;
         }
@@ -223,5 +254,11 @@ export class AccountsService {
         );
 
         return { balance: convertedBalance, currency };
+    }
+
+    async findByIban(iban: string): Promise<Account> {
+        const query = 'SELECT * FROM accounts WHERE iban = $1';
+        const result = await this.databaseService.query(query, [iban]);
+        return result.rows[0];
     }
 }

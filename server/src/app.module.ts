@@ -10,6 +10,8 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { AuditModule } from './audit/audit.module';
 import { ExchangeModule } from './exchange/exchange.module';
 import { TransactionLimitsModule } from './transactions/transaction-limits.module';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
 
 @Module({
   imports: [
@@ -25,9 +27,7 @@ import { TransactionLimitsModule } from './transactions/transaction-limits.modul
     ExchangeModule,
     TransactionLimitsModule
   ],
-  // HTTP İstekleri buraya eklenecek
-  controllers: [],
-  // providers: Servisleri ve diğer sağlayıcılar
-  providers: [],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

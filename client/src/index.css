@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+
+.table-row {
+  @apply h-[44px] sm:h-[40px];
+}
+
+

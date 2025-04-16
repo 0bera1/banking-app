@@ -1,13 +1,17 @@
-import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, UseGuards, Request, Put, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, UseGuards, Request, Put, Query, NotFoundException } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { Account } from './entities/account.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UsersService } from '../users/users.service';
 
 @Controller('accounts')
 @UseGuards(JwtAuthGuard)
 export class AccountsController {
-    constructor(private readonly accountsService: AccountsService) {}
+    constructor(
+        private readonly accountsService: AccountsService,
+        private readonly usersService: UsersService
+    ) {}
 
     // Yeni hesap oluşturma endpoint'i
     @Post()
@@ -20,6 +24,9 @@ export class AccountsController {
         } catch (error) {
             if (error.code === '23505') { // Unique constraint violation
                 throw new HttpException('Bu kart numarası zaten kullanımda', HttpStatus.CONFLICT);
+            }
+            if (error instanceof NotFoundException) {
+                throw error;
             }
             throw new HttpException('Hesap oluşturulurken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -90,5 +97,24 @@ export class AccountsController {
         @Query('currency') currency?: string,
     ) {
         return this.accountsService.getBalance(+id, currency);
+    }
+
+    @Get('verify-iban/:iban')
+    async verifyIban(@Param('iban') iban: string) {
+        const account = await this.accountsService.findByIban(iban);
+        if (!account) {
+            throw new NotFoundException('Hesap bulunamadı');
+        }
+
+        const user = await this.usersService.findOne(account.user_id);
+        if (!user) {
+            throw new NotFoundException('Kullanıcı bulunamadı');
+        }
+
+        return {
+            iban: account.iban,
+            first_name: user.first_name,
+            last_name: user.last_name
+        };
     }
 }

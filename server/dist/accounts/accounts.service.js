@@ -20,6 +20,24 @@ let AccountsService = class AccountsService {
         this.usersService = usersService;
         this.exchangeService = exchangeService;
     }
+    generateIban() {
+        const randomNumber = Math.floor(Math.random() * 1000000000000000000000000).toString().padStart(24, '0');
+        return `TR${randomNumber}`;
+    }
+    async isIbanUnique(iban) {
+        const query = 'SELECT COUNT(*) FROM accounts WHERE iban = $1';
+        const result = await this.databaseService.query(query, [iban]);
+        return result.rows[0].count === '0';
+    }
+    async generateUniqueIban() {
+        let iban;
+        let isUnique = false;
+        while (!isUnique) {
+            iban = this.generateIban();
+            isUnique = await this.isIbanUnique(iban);
+        }
+        return iban;
+    }
     async create(createAccountDto) {
         try {
             console.log('Creating account with data:', createAccountDto);
@@ -27,10 +45,11 @@ let AccountsService = class AccountsService {
             if (!user) {
                 throw new common_1.NotFoundException('Kullanıcı bulunamadı');
             }
+            const iban = await this.generateUniqueIban();
             const query = `
                 INSERT INTO accounts 
-                (card_number, card_holder_name, card_brand, card_issuer, card_type, balance, user_id, currency)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                (card_number, card_holder_name, card_brand, card_issuer, card_type, balance, user_id, currency, iban)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                 RETURNING *
             `;
             const values = [
@@ -41,7 +60,8 @@ let AccountsService = class AccountsService {
                 createAccountDto.cardType,
                 createAccountDto.initialBalance || 0,
                 createAccountDto.user_id,
-                createAccountDto.currency || 'TRY'
+                createAccountDto.currency || 'TRY',
+                iban
             ];
             console.log('Executing query:', query);
             console.log('With values:', values);
@@ -50,6 +70,9 @@ let AccountsService = class AccountsService {
             return result.rows[0];
         }
         catch (error) {
+            if (error.code === '23505') {
+                throw new common_1.BadRequestException('Bu kart numarası zaten kullanımda');
+            }
             console.error('Error in create:', error);
             throw error;
         }
@@ -179,6 +202,11 @@ let AccountsService = class AccountsService {
         }
         const convertedBalance = await this.exchangeService.convertAmount(account.balance, account.currency, currency);
         return { balance: convertedBalance, currency };
+    }
+    async findByIban(iban) {
+        const query = 'SELECT * FROM accounts WHERE iban = $1';
+        const result = await this.databaseService.query(query, [iban]);
+        return result.rows[0];
     }
 };
 exports.AccountsService = AccountsService;

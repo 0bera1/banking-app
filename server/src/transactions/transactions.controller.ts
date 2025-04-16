@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, HttpException, HttpStatus, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, HttpException, HttpStatus, Query, UseGuards, Request } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsDto } from './dto/get-transactions.dto';
@@ -10,26 +10,27 @@ export class TransactionsController {
     constructor(private readonly transactionsService: TransactionsService) {}
 
     @Post()
-    async create(@Body() createTransactionDto: CreateTransactionDto) {
-        try {
-            return await this.transactionsService.createTransaction(createTransactionDto);
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new HttpException('Transaction creation failed', HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    async create(@Request() req, @Body() createTransactionDto: CreateTransactionDto) {
+        return await this.transactionsService.createTransaction(
+            req.user.id,
+            createTransactionDto.senderAccountId,
+            createTransactionDto.receiverIban,
+            createTransactionDto.amount,
+            createTransactionDto.currency,
+            createTransactionDto.description
+        );
     }
 
     @Get()
-    async getTransactions(@Query() getTransactionsDto: GetTransactionsDto) {
+    async getTransactions(@Request() req) {
         try {
-            return await this.transactionsService.getTransactions(getTransactionsDto);
+            const userId = req.user.id;
+            return await this.transactionsService.getTransactionsByUserId(userId);
         } catch (error) {
             if (error instanceof HttpException) {
                 throw error;
             }
-            throw new HttpException('Transactions retrieval failed', HttpStatus.INTERNAL_SERVER_ERROR);
+            throw new HttpException('İşlemler getirilirken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

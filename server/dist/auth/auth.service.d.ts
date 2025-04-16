@@ -4,7 +4,7 @@ export declare class AuthService {
     private readonly usersService;
     private readonly jwtService;
     constructor(usersService: UsersService, jwtService: JwtService);
-    register(username: string, email: string, password: string): Promise<{
+    register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<{
         id: number;
         username: string;
         email: string;

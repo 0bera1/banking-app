@@ -1,30 +1,37 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsNumber, Min, IsOptional } from 'class-validator';
+import { CardBrand, CardIssuer, CardType, Currency } from '../entities/account.entity';
 
 // Account oluşturma için DTO
 export class CreateAccountDto {
     @IsString()
+    @IsNotEmpty()
     cardNumber: string;
 
     @IsString()
+    @IsNotEmpty()
     cardHolderName: string;
 
-    @IsString()
-    cardBrand: string;
+    @IsEnum(CardBrand)
+    @IsNotEmpty()
+    cardBrand: CardBrand;
 
-    @IsString()
-    cardIssuer: string;
+    @IsEnum(CardIssuer)
+    @IsNotEmpty()
+    cardIssuer: CardIssuer;
 
-    @IsString()
-    cardType: string;
+    @IsEnum(CardType)
+    @IsNotEmpty()
+    cardType: CardType;
 
     @IsNumber()
+    @Min(0)
     @IsOptional()
     initialBalance?: number;
 
+    @IsEnum(Currency)
+    @IsOptional()
+    currency?: Currency;
+
     @IsNumber()
     user_id: number;
-
-    @IsString()
-    @IsOptional()
-    currency?: string = 'TRY';
 } 
