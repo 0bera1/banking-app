@@ -23,6 +23,9 @@ export const AccountList = ({ accounts }: AccountListProps) => {
         <thead className="bg-gray-50">
           <tr className="table-row">
             <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+              IBAN
+            </th>
+            <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
               Hesap Numarası
             </th>
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
@@ -39,6 +42,9 @@ export const AccountList = ({ accounts }: AccountListProps) => {
         <tbody className="divide-y divide-gray-200 bg-white">
           {accounts.map((account) => (
             <tr key={account.id} className="table-row">
+              <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                {account.iban}
+              </td>
               <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                 {account.card_number}
               </td>

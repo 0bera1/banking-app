@@ -37,19 +37,56 @@ export class AccountsService {
         return iban;
     }
 
+    private generateCardNumber(): string {
+        // VISA: 4 ile başlar, 16 haneli
+        // Mastercard: 5 ile başlar, 16 haneli
+        // AMEX: 3 ile başlar, 15 haneli
+        const prefix = Math.random() > 0.5 ? '4' : '5'; // VISA veya Mastercard
+        let cardNumber = prefix;
+        
+        // 15 haneli rastgele sayı oluştur (prefix hariç)
+        for (let i = 0; i < 14; i++) {
+            cardNumber += Math.floor(Math.random() * 10);
+        }
+
+        // Luhn algoritması ile kontrol hanesi ekle
+        let sum = 0;
+        let isEven = false;
+        for (let i = cardNumber.length - 1; i >= 0; i--) {
+            let digit = parseInt(cardNumber[i]);
+            if (isEven) {
+                digit *= 2;
+                if (digit > 9) {
+                    digit -= 9;
+                }
+            }
+            sum += digit;
+            isEven = !isEven;
+        }
+        const checkDigit = (10 - (sum % 10)) % 10;
+        return cardNumber + checkDigit;
+    }
+
     // Yeni hesap oluşturma
     async create(createAccountDto: CreateAccountDto & { user_id: number }): Promise<Account> {
         try {
             console.log('Creating account with data:', createAccountDto);
             
+            if (!createAccountDto.user_id) {
+                console.error('User ID is missing');
+                throw new BadRequestException('Kullanıcı ID\'si bulunamadı');
+            }
+
             // Kullanıcıyı kontrol et
             const user = await this.usersService.findOne(createAccountDto.user_id);
             if (!user) {
+                console.error('User not found:', createAccountDto.user_id);
                 throw new NotFoundException('Kullanıcı bulunamadı');
             }
 
             // Benzersiz IBAN oluştur
             const iban = await this.generateUniqueIban();
+            console.log('Generated IBAN:', iban);
 
             const query = `
                 INSERT INTO accounts 
@@ -59,7 +96,7 @@ export class AccountsService {
             `;
             
             const values = [
-                createAccountDto.cardNumber,
+                this.generateCardNumber(),
                 createAccountDto.cardHolderName,
                 createAccountDto.cardBrand,
                 createAccountDto.cardIssuer,
@@ -76,13 +113,27 @@ export class AccountsService {
             // Query'i çalıştır
             const result = await this.databaseService.query(query, values);
             console.log('Query result:', result);
+            
+            if (!result.rows || result.rows.length === 0) {
+                console.error('No rows returned from query');
+                throw new Error('Hesap oluşturulamadı');
+            }
+            
             return result.rows[0];
         } catch (error) {
+            console.error('Error in create:', error);
             if (error.code === '23505') { // Unique constraint violation
                 throw new BadRequestException('Bu kart numarası zaten kullanımda');
             }
-            console.error('Error in create:', error);
-            throw error;
+            if (error instanceof BadRequestException || error instanceof NotFoundException) {
+                throw error;
+            }
+            console.error('Detailed error:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            throw new Error(`Hesap oluşturulurken bir hata oluştu: ${error.message}`);
         }
     }
 

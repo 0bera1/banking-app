@@ -51,8 +51,4 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateAccountDto.prototype, "currency", void 0);
-__decorate([
-    (0, class_validator_1.IsNumber)(),
-    __metadata("design:type", Number)
-], CreateAccountDto.prototype, "user_id", void 0);
 //# sourceMappingURL=create-account.dto.js.map

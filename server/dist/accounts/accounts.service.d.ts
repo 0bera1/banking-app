@@ -11,6 +11,7 @@ export declare class AccountsService {
     private generateIban;
     private isIbanUnique;
     private generateUniqueIban;
+    private generateCardNumber;
     create(createAccountDto: CreateAccountDto & {
         user_id: number;
     }): Promise<Account>;

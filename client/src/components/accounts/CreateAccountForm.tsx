@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CardBrand, CardIssuer, CardType, Currency } from '../../types/account';
+import { ChevronDownIcon } from '@heroicons/react/20/solid';
 
 interface CreateAccountFormProps {
   onClose: () => void;
@@ -21,6 +22,53 @@ export const CreateAccountForm = ({ onClose, onSuccess }: CreateAccountFormProps
   const [error, setError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+
+  // Kart numarası oluşturma fonksiyonu
+  const generateCardNumber = (brand: CardBrand) => {
+    let prefix = '';
+    switch (brand) {
+      case CardBrand.VISA:
+        prefix = '4';
+        break;
+      case CardBrand.MASTERCARD:
+        prefix = '5';
+        break;
+      case CardBrand.AMEX:
+        prefix = '3';
+        break;
+      default:
+        prefix = '4';
+    }
+
+    // 15 haneli rastgele sayı oluştur (prefix hariç)
+    let cardNumber = prefix;
+    for (let i = 0; i < 14; i++) {
+      cardNumber += Math.floor(Math.random() * 10);
+    }
+
+    // Luhn algoritması ile kontrol hanesi ekle
+    let sum = 0;
+    let isEven = false;
+    for (let i = cardNumber.length - 1; i >= 0; i--) {
+      let digit = parseInt(cardNumber[i]);
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+      sum += digit;
+      isEven = !isEven;
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return cardNumber + checkDigit;
+  };
+
+  // Kart markası değiştiğinde yeni kart numarası oluştur
+  useEffect(() => {
+    const newCardNumber = generateCardNumber(formData.cardBrand);
+    setFormData(prev => ({ ...prev, cardNumber: newCardNumber }));
+  }, [formData.cardBrand]);
 
   const mutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -60,7 +108,7 @@ export const CreateAccountForm = ({ onClose, onSuccess }: CreateAccountFormProps
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center">
+    <div className="fixed inset-0 bg-gray-900/75 flex items-center justify-center">
       <div className="bg-white rounded-lg p-6 max-w-md w-full">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Yeni Hesap Oluştur</h2>
         {error && (
@@ -69,129 +117,155 @@ export const CreateAccountForm = ({ onClose, onSuccess }: CreateAccountFormProps
           </div>
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700">
-              Kart Numarası
-            </label>
+          <div className="relative">
             <input
               type="text"
               id="cardNumber"
               value={formData.cardNumber}
-              onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
-              placeholder="16 haneli kart numarası giriniz"
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              readOnly
+              placeholder=" "
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               required
-              maxLength={16}
-              pattern="[0-9]*"
-              title="16 haneli kart numarası giriniz"
             />
+            <label
+              htmlFor="cardNumber"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Kart Numarası
+            </label>
           </div>
 
-          <div>
-            <label htmlFor="cardHolderName" className="block text-sm font-medium text-gray-700">
-              Kart Sahibinin Adı
-            </label>
+          <div className="relative">
             <input
               type="text"
               id="cardHolderName"
               value={formData.cardHolderName}
               onChange={(e) => setFormData({ ...formData, cardHolderName: e.target.value })}
-              placeholder="Hesap sahibi adınızı giriniz"
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              placeholder=" "
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               required
             />
+            <label
+              htmlFor="cardHolderName"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Kart Sahibinin Adı
+            </label>
           </div>
 
-          <div>
-            <label htmlFor="cardBrand" className="block text-sm font-medium text-gray-700">
-              Kart Markası
-            </label>
+          <div className="relative">
             <select
               id="cardBrand"
               value={formData.cardBrand}
               onChange={(e) => setFormData({ ...formData, cardBrand: e.target.value as CardBrand })}
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               required
             >
+              <option value=""> </option>
               {Object.values(CardBrand).map((brand) => (
                 <option key={brand} value={brand}>
                   {brand.toUpperCase()}
                 </option>
               ))}
             </select>
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <label
+              htmlFor="cardBrand"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Kart Markası
+            </label>
           </div>
 
-          <div>
-            <label htmlFor="cardIssuer" className="block text-sm font-medium text-gray-700">
-              Kart Veren Kuruluş
-            </label>
+          <div className="relative">
             <select
               id="cardIssuer"
               value={formData.cardIssuer}
               onChange={(e) => setFormData({ ...formData, cardIssuer: e.target.value as CardIssuer })}
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               required
             >
+              <option value=""> </option>
               {Object.values(CardIssuer).map((issuer) => (
                 <option key={issuer} value={issuer}>
                   {issuer.toUpperCase()}
                 </option>
               ))}
             </select>
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <label
+              htmlFor="cardIssuer"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Kart Veren Kuruluş
+            </label>
           </div>
 
-          <div>
-            <label htmlFor="cardType" className="block text-sm font-medium text-gray-700">
-              Kart Tipi
-            </label>
+          <div className="relative">
             <select
               id="cardType"
               value={formData.cardType}
               onChange={(e) => setFormData({ ...formData, cardType: e.target.value as CardType })}
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               required
             >
+              <option value=""> </option>
               {Object.values(CardType).map((type) => (
                 <option key={type} value={type}>
                   {type.toUpperCase()}
                 </option>
               ))}
             </select>
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <label
+              htmlFor="cardType"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Kart Tipi
+            </label>
           </div>
 
-          <div>
-            <label htmlFor="initialBalance" className="block text-sm font-medium text-gray-700">
-              Başlangıç Bakiyesi
-            </label>
+          <div className="relative">
             <input
               type="number"
               id="initialBalance"
               value={formData.initialBalance}
               onChange={(e) => setFormData({ ...formData, initialBalance: e.target.value })}
-              placeholder="Başlangıç bakiyesini giriniz"
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              placeholder=" "
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               min="0"
               step="0.01"
             />
+            <label
+              htmlFor="initialBalance"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Başlangıç Bakiyesi
+            </label>
           </div>
 
-          <div>
-            <label htmlFor="currency" className="block text-sm font-medium text-gray-700">
-              Para Birimi
-            </label>
+          <div className="relative">
             <select
               id="currency"
               value={formData.currency}
               onChange={(e) => setFormData({ ...formData, currency: e.target.value as Currency })}
-              className="mt-1 block w-full h-7 rounded-md indent-2 border-gray-300 shadow-sm hover:cursor-text focus:!border-indigo-500 focus:!ring-indigo-500 sm:text-sm"
+              className="block w-full px-3 py-3 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 peer"
               required
             >
+              <option value=""> </option>
               {Object.values(Currency).map((currency) => (
                 <option key={currency} value={currency}>
                   {currency}
                 </option>
               ))}
             </select>
+            <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            <label
+              htmlFor="currency"
+              className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            >
+              Para Birimi
+            </label>
           </div>
 
           <div className="flex justify-end space-x-3">

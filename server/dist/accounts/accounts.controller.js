@@ -25,16 +25,33 @@ let AccountsController = class AccountsController {
     }
     async create(req, createAccountDto) {
         try {
-            return await this.accountsService.create(Object.assign(Object.assign({}, createAccountDto), { user_id: req.user.id }));
+            console.log('Request user:', req.user);
+            console.log('Create account DTO:', createAccountDto);
+            if (!req.user || !req.user.id) {
+                console.error('User not found in request');
+                throw new common_1.HttpException('Kullanıcı bilgisi bulunamadı', common_1.HttpStatus.UNAUTHORIZED);
+            }
+            const account = await this.accountsService.create(Object.assign(Object.assign({}, createAccountDto), { user_id: req.user.id }));
+            console.log('Created account:', account);
+            return account;
         }
         catch (error) {
+            console.error('Error in create controller:', error);
             if (error.code === '23505') {
                 throw new common_1.HttpException('Bu kart numarası zaten kullanımda', common_1.HttpStatus.CONFLICT);
             }
             if (error instanceof common_1.NotFoundException) {
                 throw error;
             }
-            throw new common_1.HttpException('Hesap oluşturulurken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            if (error instanceof common_1.HttpException) {
+                throw error;
+            }
+            console.error('Detailed error:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            throw new common_1.HttpException(`Hesap oluşturulurken bir hata oluştu: ${error.message}`, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
     async findOne(req, id) {
@@ -85,6 +102,9 @@ let AccountsController = class AccountsController {
         if (!account) {
             throw new common_1.NotFoundException('Hesap bulunamadı');
         }
+        if (account.status === 'inactive') {
+            throw new common_1.BadRequestException('Bu IBAN\'a ait hesap aktif değil');
+        }
         const user = await this.usersService.findOne(account.user_id);
         if (!user) {
             throw new common_1.NotFoundException('Kullanıcı bulunamadı');
@@ -92,8 +112,20 @@ let AccountsController = class AccountsController {
         return {
             iban: account.iban,
             first_name: user.first_name,
-            last_name: user.last_name
+            last_name: user.last_name,
+            status: account.status
         };
+    }
+    async updateStatus(req, id, status) {
+        try {
+            return await this.accountsService.updateStatus(+id, status, req.user.id);
+        }
+        catch (error) {
+            if (error instanceof common_1.HttpException) {
+                throw error;
+            }
+            throw new common_1.HttpException('Hesap durumu güncellenirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 };
 exports.AccountsController = AccountsController;
@@ -167,6 +199,15 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "verifyIban", null);
+__decorate([
+    (0, common_1.Put)(':id/status'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "updateStatus", null);
 exports.AccountsController = AccountsController = __decorate([
     (0, common_1.Controller)('accounts'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

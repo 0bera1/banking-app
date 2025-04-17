@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, UseGuards, Request, Put, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, UseGuards, Request, Put, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { Account } from './entities/account.entity';
@@ -17,18 +17,41 @@ export class AccountsController {
     @Post()
     async create(@Request() req, @Body() createAccountDto: CreateAccountDto): Promise<Account> {
         try {
-            return await this.accountsService.create({
+            console.log('Request user:', req.user);
+            console.log('Create account DTO:', createAccountDto);
+            
+            if (!req.user || !req.user.id) {
+                console.error('User not found in request');
+                throw new HttpException('Kullanıcı bilgisi bulunamadı', HttpStatus.UNAUTHORIZED);
+            }
+
+            const account = await this.accountsService.create({
                 ...createAccountDto,
                 user_id: req.user.id
             });
+            
+            console.log('Created account:', account);
+            return account;
         } catch (error) {
+            console.error('Error in create controller:', error);
             if (error.code === '23505') { // Unique constraint violation
                 throw new HttpException('Bu kart numarası zaten kullanımda', HttpStatus.CONFLICT);
             }
             if (error instanceof NotFoundException) {
                 throw error;
             }
-            throw new HttpException('Hesap oluşturulurken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            console.error('Detailed error:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            throw new HttpException(
+                `Hesap oluşturulurken bir hata oluştu: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
@@ -106,6 +129,10 @@ export class AccountsController {
             throw new NotFoundException('Hesap bulunamadı');
         }
 
+        if (account.status === 'inactive') {
+            throw new BadRequestException('Bu IBAN\'a ait hesap aktif değil');
+        }
+
         const user = await this.usersService.findOne(account.user_id);
         if (!user) {
             throw new NotFoundException('Kullanıcı bulunamadı');
@@ -114,7 +141,24 @@ export class AccountsController {
         return {
             iban: account.iban,
             first_name: user.first_name,
-            last_name: user.last_name
+            last_name: user.last_name,
+            status: account.status
         };
+    }
+
+    @Put(':id/status')
+    async updateStatus(
+        @Request() req,
+        @Param('id') id: string,
+        @Body('status') status: 'active' | 'inactive' | 'blocked'
+    ): Promise<Account> {
+        try {
+            return await this.accountsService.updateStatus(+id, status, req.user.id);
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException('Hesap durumu güncellenirken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

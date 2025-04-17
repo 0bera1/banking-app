@@ -7,5 +7,4 @@ export declare class CreateAccountDto {
     cardType: CardType;
     initialBalance?: number;
     currency?: Currency;
-    user_id: number;
 }

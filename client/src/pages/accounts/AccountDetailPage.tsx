@@ -44,9 +44,10 @@ export const AccountDetailPage = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-semibold text-gray-700">Hesap Detayı</h1>
       </div>
+      
 
       <AccountInfo account={account} />
-      <AccountTransactions accountId={account.id} />
+      {/* <AccountTransactions accountId={account.id} /> */}
     </div>
   );
 }; 

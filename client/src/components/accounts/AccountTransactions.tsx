@@ -56,10 +56,7 @@ export const AccountTransactions = ({ accountId }: AccountTransactionsProps) => 
           {transactions.map((transaction: Transaction) => (
             <tr key={transaction.id} className="table-row">
               <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-500 sm:pl-6">
-                {new Date(transaction.createdAt).toLocaleDateString('tr-TR')}
-              </td>
-              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                {transaction.type}
+                {new Date(transaction.created_at).toLocaleDateString('tr-TR')}
               </td>
               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                 {transaction.amount.toLocaleString('tr-TR', {

@@ -31,7 +31,4 @@ export class CreateAccountDto {
     @IsEnum(Currency)
     @IsOptional()
     currency?: Currency;
-
-    @IsNumber()
-    user_id: number;
 } 

@@ -21,5 +21,7 @@ export declare class AccountsController {
         iban: string;
         first_name: string;
         last_name: string;
+        status: import("./entities/account.entity").AccountStatus.ACTIVE | import("./entities/account.entity").AccountStatus.BLOCKED;
     }>;
+    updateStatus(req: any, id: string, status: 'active' | 'inactive' | 'blocked'): Promise<Account>;
 }

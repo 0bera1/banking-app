@@ -38,14 +38,42 @@ let AccountsService = class AccountsService {
         }
         return iban;
     }
+    generateCardNumber() {
+        const prefix = Math.random() > 0.5 ? '4' : '5';
+        let cardNumber = prefix;
+        for (let i = 0; i < 14; i++) {
+            cardNumber += Math.floor(Math.random() * 10);
+        }
+        let sum = 0;
+        let isEven = false;
+        for (let i = cardNumber.length - 1; i >= 0; i--) {
+            let digit = parseInt(cardNumber[i]);
+            if (isEven) {
+                digit *= 2;
+                if (digit > 9) {
+                    digit -= 9;
+                }
+            }
+            sum += digit;
+            isEven = !isEven;
+        }
+        const checkDigit = (10 - (sum % 10)) % 10;
+        return cardNumber + checkDigit;
+    }
     async create(createAccountDto) {
         try {
             console.log('Creating account with data:', createAccountDto);
+            if (!createAccountDto.user_id) {
+                console.error('User ID is missing');
+                throw new common_1.BadRequestException('Kullanıcı ID\'si bulunamadı');
+            }
             const user = await this.usersService.findOne(createAccountDto.user_id);
             if (!user) {
+                console.error('User not found:', createAccountDto.user_id);
                 throw new common_1.NotFoundException('Kullanıcı bulunamadı');
             }
             const iban = await this.generateUniqueIban();
+            console.log('Generated IBAN:', iban);
             const query = `
                 INSERT INTO accounts 
                 (card_number, card_holder_name, card_brand, card_issuer, card_type, balance, user_id, currency, iban)
@@ -53,7 +81,7 @@ let AccountsService = class AccountsService {
                 RETURNING *
             `;
             const values = [
-                createAccountDto.cardNumber,
+                this.generateCardNumber(),
                 createAccountDto.cardHolderName,
                 createAccountDto.cardBrand,
                 createAccountDto.cardIssuer,
@@ -67,14 +95,26 @@ let AccountsService = class AccountsService {
             console.log('With values:', values);
             const result = await this.databaseService.query(query, values);
             console.log('Query result:', result);
+            if (!result.rows || result.rows.length === 0) {
+                console.error('No rows returned from query');
+                throw new Error('Hesap oluşturulamadı');
+            }
             return result.rows[0];
         }
         catch (error) {
+            console.error('Error in create:', error);
             if (error.code === '23505') {
                 throw new common_1.BadRequestException('Bu kart numarası zaten kullanımda');
             }
-            console.error('Error in create:', error);
-            throw error;
+            if (error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException) {
+                throw error;
+            }
+            console.error('Detailed error:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            throw new Error(`Hesap oluşturulurken bir hata oluştu: ${error.message}`);
         }
     }
     async remove(id, user_id) {

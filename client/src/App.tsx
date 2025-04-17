@@ -10,6 +10,7 @@ import { Notification } from './components/notifications/Notification';
 import { LoginPage } from './pages/auth/LoginPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { RegisterPage } from './pages/auth/RegisterPage';
+import { DepositWithdrawPage } from './pages/accounts/DepositWithdrawPage';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ function App() {
               <Route path="/accounts/:accountId" element={<AccountDetailPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/transactions/:transactionId" element={<TransactionDetailPage />} />
+              <Route path="/deposit-withdraw" element={<DepositWithdrawPage />} />
             </Route>
           </Routes>
           <Notification />
