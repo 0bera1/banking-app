@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("./accounts.service");
-const create_account_dto_1 = require("./dto/create-account.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const users_service_1 = require("../users/users.service");
 let AccountsController = class AccountsController {
@@ -88,11 +87,17 @@ let AccountsController = class AccountsController {
         }
         return account;
     }
-    deposit(id, amount) {
-        return this.accountsService.deposit(+id, amount);
+    async deposit(req, id, amount) {
+        if (!req.user || !req.user.id) {
+            throw new common_1.HttpException('Kullanıcı bilgisi bulunamadı', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        return this.accountsService.deposit(+id, amount, req.user.id);
     }
-    withdraw(id, amount) {
-        return this.accountsService.withdraw(+id, amount);
+    async withdraw(req, id, amount) {
+        if (!req.user || !req.user.id) {
+            throw new common_1.HttpException('Kullanıcı bilgisi bulunamadı', common_1.HttpStatus.UNAUTHORIZED);
+        }
+        return this.accountsService.withdraw(+id, amount, req.user.id);
     }
     getBalance(id, currency) {
         return this.accountsService.getBalance(+id, currency);
@@ -134,7 +139,7 @@ __decorate([
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_account_dto_1.CreateAccountDto]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "create", null);
 __decorate([
@@ -170,19 +175,21 @@ __decorate([
 ], AccountsController.prototype, "findByCardNumber", null);
 __decorate([
     (0, common_1.Put)(':id/deposit'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)('amount')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('amount')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, String, Number]),
+    __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "deposit", null);
 __decorate([
     (0, common_1.Put)(':id/withdraw'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)('amount')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)('amount')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Number]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, String, Number]),
+    __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "withdraw", null);
 __decorate([
     (0, common_1.Get)(':id/balance'),

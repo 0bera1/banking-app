@@ -102,9 +102,9 @@ let TransactionsService = class TransactionsService {
             LIMIT $2 OFFSET $3
         `;
         const values = [
-            getTransactionsDto.accountId,
-            getTransactionsDto.limit,
-            getTransactionsDto.offset
+            getTransactionsDto.account_id,
+            getTransactionsDto.limit || 10,
+            getTransactionsDto.offset || 0
         ];
         return this.databaseService.query(query, values);
     }

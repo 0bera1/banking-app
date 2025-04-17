@@ -105,13 +105,19 @@ export class AccountsController {
     }
 
     @Put(':id/deposit')
-    deposit(@Param('id') id: string, @Body('amount') amount: number) {
-        return this.accountsService.deposit(+id, amount);
+    async deposit(@Request() req, @Param('id') id: string, @Body('amount') amount: number) {
+        if (!req.user || !req.user.id) {
+            throw new HttpException('Kullanıcı bilgisi bulunamadı', HttpStatus.UNAUTHORIZED);
+        }
+        return this.accountsService.deposit(+id, amount, req.user.id);
     }
 
     @Put(':id/withdraw')
-    withdraw(@Param('id') id: string, @Body('amount') amount: number) {
-        return this.accountsService.withdraw(+id, amount);
+    async withdraw(@Request() req, @Param('id') id: string, @Body('amount') amount: number) {
+        if (!req.user || !req.user.id) {
+            throw new HttpException('Kullanıcı bilgisi bulunamadı', HttpStatus.UNAUTHORIZED);
+        }
+        return this.accountsService.withdraw(+id, amount, req.user.id);
     }
 
     @Get(':id/balance')

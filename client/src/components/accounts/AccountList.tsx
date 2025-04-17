@@ -34,6 +34,9 @@ export const AccountList = ({ accounts }: AccountListProps) => {
             <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
               Bakiye
             </th>
+            <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              Durum
+            </th>
             <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
               <span className="sr-only">İşlemler</span>
             </th>
@@ -59,10 +62,20 @@ export const AccountList = ({ accounts }: AccountListProps) => {
                   maximumFractionDigits: 2
                 }).format(account.balance)}
               </td>
+              <td className={`whitespace-nowrap px-3 py-4 text-sm text-gray-500`}>
+               
+                {account.status === 'active' ? (
+                  <span className="bg-green-400 shadow-md text-white px-4 py-1 text-xs rounded-full">Aktif</span>
+                ) : account.status === 'inactive' ? (
+                  <span className="bg-red-500 shadow-md text-white px-4 py-1 text-xs rounded-full">Pasif</span>
+                ) : (
+                  <span className="bg-gray-600 shadow-md text-white px-4 py-1 text-xs rounded-full">Engellendi</span>
+                )}
+              </td>
               <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                 <button
                   onClick={() => navigate(`/accounts/${account.id}`)}
-                  className=" hover:cursor-pointer !bg-indigo-700 hover:shadow-2xl hover:!bg-indigo-600 text-white px-4 py-1 rounded-full"
+                  className=" hover:cursor-pointer !bg-indigo-700 shadow-md hover:!bg-indigo-600 text-white px-4 text-xs py-1 rounded-full"
                 >
                   Detay
                 </button>

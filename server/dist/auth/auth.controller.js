@@ -21,20 +21,12 @@ let AuthController = class AuthController {
         this.authService = authService;
         this.usersService = usersService;
     }
-    async login(loginData) {
-        try {
-            const user = await this.authService.validateUser(loginData.email, loginData.password);
-            if (!user) {
-                throw new common_1.HttpException('Invalid email or password', common_1.HttpStatus.UNAUTHORIZED);
-            }
-            return this.authService.login(user);
+    async login(loginDto) {
+        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+        if (!user) {
+            throw new common_1.UnauthorizedException('Invalid credentials');
         }
-        catch (error) {
-            if (error instanceof common_1.HttpException) {
-                throw error;
-            }
-            throw new common_1.HttpException('Error logging in', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return this.authService.login(user);
     }
     async register(userData) {
         try {

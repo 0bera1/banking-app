@@ -22,8 +22,8 @@ export declare class AccountsService {
     updateBalance(id: number, amount: number, user_id: number): Promise<Account>;
     updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<Account>;
     findAll(): Promise<any>;
-    deposit(id: number, amount: number): Promise<any>;
-    withdraw(id: number, amount: number): Promise<any>;
+    deposit(id: number, amount: number, user_id: number): Promise<any>;
+    withdraw(id: number, amount: number, user_id: number): Promise<any>;
     getBalance(id: number, currency?: string): Promise<{
         balance: number;
         currency: string;

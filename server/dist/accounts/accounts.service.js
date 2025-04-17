@@ -182,55 +182,60 @@ let AccountsService = class AccountsService {
         const result = await this.databaseService.query(query);
         return result.rows;
     }
-    async deposit(id, amount) {
+    async deposit(id, amount, user_id) {
         if (amount <= 0) {
-            throw new common_1.BadRequestException('Amount must be positive');
+            throw new common_1.BadRequestException('Yatırılacak tutar pozitif olmalıdır');
+        }
+        const account = await this.findOne(id);
+        if (!account) {
+            throw new common_1.NotFoundException('Hesap bulunamadı');
+        }
+        if (account.user_id !== user_id) {
+            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
+        }
+        if (account.status !== 'active') {
+            throw new common_1.BadRequestException('Bu hesap aktif değil');
         }
         const query = `
             UPDATE accounts 
             SET balance = balance + $1 
-            WHERE id = $2 
+            WHERE id = $2 AND user_id = $3
             RETURNING *
         `;
-        const result = await this.databaseService.query(query, [amount, id]);
+        const result = await this.databaseService.query(query, [amount, id, user_id]);
         if (result.rows.length === 0) {
-            throw new common_1.NotFoundException('Account not found');
+            throw new common_1.NotFoundException('Hesap bulunamadı');
         }
         return result.rows[0];
     }
-    async withdraw(id, amount) {
+    async withdraw(id, amount, user_id) {
         if (amount <= 0) {
-            throw new common_1.BadRequestException('Amount must be positive');
+            throw new common_1.BadRequestException('Çekilecek tutar pozitif olmalıdır');
         }
-        const client = await this.databaseService.getClient();
-        try {
-            await client.query('BEGIN');
-            const checkQuery = 'SELECT * FROM accounts WHERE id = $1 FOR UPDATE';
-            const checkResult = await client.query(checkQuery, [id]);
-            if (checkResult.rows.length === 0) {
-                throw new common_1.NotFoundException('Account not found');
-            }
-            const account = checkResult.rows[0];
-            if (account.balance < amount) {
-                throw new common_1.BadRequestException('Insufficient balance');
-            }
-            const updateQuery = `
-                UPDATE accounts 
-                SET balance = balance - $1 
-                WHERE id = $2 
-                RETURNING *
-            `;
-            const result = await client.query(updateQuery, [amount, id]);
-            await client.query('COMMIT');
-            return result.rows[0];
+        const account = await this.findOne(id);
+        if (!account) {
+            throw new common_1.NotFoundException('Hesap bulunamadı');
         }
-        catch (error) {
-            await client.query('ROLLBACK');
-            throw error;
+        if (account.user_id !== user_id) {
+            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
         }
-        finally {
-            client.release();
+        if (account.status !== 'active') {
+            throw new common_1.BadRequestException('Bu hesap aktif değil');
         }
+        if (account.balance < amount) {
+            throw new common_1.BadRequestException('Yetersiz bakiye');
+        }
+        const query = `
+            UPDATE accounts 
+            SET balance = balance - $1 
+            WHERE id = $2 AND user_id = $3
+            RETURNING *
+        `;
+        const result = await this.databaseService.query(query, [amount, id, user_id]);
+        if (result.rows.length === 0) {
+            throw new common_1.NotFoundException('Hesap bulunamadı');
+        }
+        return result.rows[0];
     }
     async getBalance(id, currency) {
         const account = await this.findOne(id);

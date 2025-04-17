@@ -15,14 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TransactionsController = void 0;
 const common_1 = require("@nestjs/common");
 const transactions_service_1 = require("./transactions.service");
-const create_transaction_dto_1 = require("./dto/create-transaction.dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let TransactionsController = class TransactionsController {
     constructor(transactionsService) {
         this.transactionsService = transactionsService;
     }
     async create(req, createTransactionDto) {
-        return await this.transactionsService.createTransaction(req.user.id, createTransactionDto.senderAccountId, createTransactionDto.receiverIban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
+        return await this.transactionsService.createTransaction(req.user.id, createTransactionDto.sender_id, createTransactionDto.receiver_iban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
     }
     async getTransactions(req) {
         try {
@@ -43,7 +42,7 @@ __decorate([
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_transaction_dto_1.CreateTransactionDto]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TransactionsController.prototype, "create", null);
 __decorate([

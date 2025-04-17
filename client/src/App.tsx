@@ -11,6 +11,7 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DepositWithdrawPage } from './pages/accounts/DepositWithdrawPage';
+import { Toaster } from 'react-hot-toast';
 import './index.css';
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ function App() {
             </Route>
           </Routes>
           <Notification />
+          <Toaster position="top-right" />
         </Router>
       </NotificationProvider>
     </QueryClientProvider>

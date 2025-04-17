@@ -1,10 +1,12 @@
-import { CardBrand, CardIssuer, CardType, Currency } from '../entities/account.entity';
-export declare class CreateAccountDto {
-    cardNumber: string;
-    cardHolderName: string;
-    cardBrand: CardBrand;
-    cardIssuer: CardIssuer;
-    cardType: CardType;
+export interface CreateAccountDto {
+    user_id: number;
+    account_number: string;
+    balance?: number;
+    currency?: string;
+    status?: string;
+    cardHolderName?: string;
+    cardBrand?: string;
+    cardIssuer?: string;
+    cardType?: string;
     initialBalance?: number;
-    currency?: Currency;
 }

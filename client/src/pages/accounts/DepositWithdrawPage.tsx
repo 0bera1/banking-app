@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Account } from '../../types/account';
 import { CreateTransactionForm } from '../../components/transactions/CreateTransactionForm';
 import { ChevronDownIcon } from '@heroicons/react/20/solid';
+import { toast } from 'react-hot-toast';
 
 export const DepositWithdrawPage = () => {
   const [selectedAccount, setSelectedAccount] = useState<string>('');
@@ -27,18 +28,23 @@ export const DepositWithdrawPage = () => {
       }
       return response.json();
     },
+    refetchInterval: 5000,
   });
 
   const mutation = useMutation({
     mutationFn: async (data: { accountId: number; amount: number; type: 'deposit' | 'withdraw' }) => {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3000/accounts/transaction', {
-        method: 'POST',
+      const endpoint = data.type === 'deposit' 
+        ? `http://localhost:3000/accounts/${data.accountId}/deposit`
+        : `http://localhost:3000/accounts/${data.accountId}/withdraw`;
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ amount: data.amount }),
       });
 
       if (!response.ok) {
@@ -52,9 +58,15 @@ export const DepositWithdrawPage = () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setAmount('');
       setError(null);
+      toast.success(
+        transactionType === 'deposit' 
+          ? 'Para yatırma işlemi başarıyla tamamlandı'
+          : 'Para çekme işlemi başarıyla tamamlandı'
+      );
     },
     onError: (error: Error) => {
       setError(error.message);
+      toast.error(error.message);
     }
   });
 
@@ -64,18 +76,21 @@ export const DepositWithdrawPage = () => {
 
     if (!selectedAccount) {
       setError('Lütfen bir hesap seçin');
+      toast.error('Lütfen bir hesap seçin');
       return;
     }
 
     const amountValue = parseFloat(amount);
     if (isNaN(amountValue) || amountValue <= 0) {
       setError('Lütfen geçerli bir tutar girin');
+      toast.error('Lütfen geçerli bir tutar girin');
       return;
     }
 
     const account = accounts.find((acc: Account) => acc.id === parseInt(selectedAccount));
     if (transactionType === 'withdraw' && account && amountValue > account.balance) {
       setError('Yetersiz bakiye');
+      toast.error('Yetersiz bakiye');
       return;
     }
 
@@ -148,11 +163,20 @@ export const DepositWithdrawPage = () => {
           <ChevronDownIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           <label
             htmlFor="account"
-            className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-[#F9FAFB] px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+            className="absolute text-gray-500 duration-500 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-[#F9FAFB] px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
           >
             Hesap Seçin
           </label>
         </div>
+
+        {selectedAccount && (
+          <div className="bg-gray-50 rounded-md">
+            <p className="text-sm text-gray-600">Mevcut Bakiye:</p>
+            <p className="text-lg font-semibold text-gray-900">
+              {accounts.find((acc: Account) => acc.id === parseInt(selectedAccount))?.balance} {accounts.find((acc: Account) => acc.id === parseInt(selectedAccount))?.currency}
+            </p>
+          </div>
+        )}
 
         <div className="relative">
           <input
@@ -168,7 +192,7 @@ export const DepositWithdrawPage = () => {
           />
           <label
             htmlFor="amount"
-            className="absolute text-gray-500 duration-300 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-[#F9FAFB] px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
+                className="absolute text-gray-500 duration-500 transform -translate-y-5 scale-75 top-2 z-10 origin-[0] bg-[#F9FAFB] px-2 peer-focus:px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:-translate-y-1/2 peer-placeholder-shown:top-1/2 peer-focus:top-2 peer-focus:-translate-y-5 peer-focus:scale-75 peer-focus:text-indigo-600 left-1"
           >
             {transactionType === 'deposit' ? 'Yatırılacak Tutar' : 'Çekilecek Tutar'}
           </label>

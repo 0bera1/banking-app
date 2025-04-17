@@ -11,17 +11,17 @@ export declare class AccountsController {
     findAll(req: any): Promise<Account[]>;
     remove(req: any, id: string): Promise<void>;
     findByCardNumber(req: any, cardNumber: string): Promise<Account>;
-    deposit(id: string, amount: number): Promise<any>;
-    withdraw(id: string, amount: number): Promise<any>;
+    deposit(req: any, id: string, amount: number): Promise<any>;
+    withdraw(req: any, id: string, amount: number): Promise<any>;
     getBalance(id: string, currency?: string): Promise<{
         balance: number;
         currency: string;
     }>;
     verifyIban(iban: string): Promise<{
         iban: string;
-        first_name: string;
-        last_name: string;
-        status: import("./entities/account.entity").AccountStatus.ACTIVE | import("./entities/account.entity").AccountStatus.BLOCKED;
+        first_name: any;
+        last_name: any;
+        status: string;
     }>;
     updateStatus(req: any, id: string, status: 'active' | 'inactive' | 'blocked'): Promise<Account>;
 }

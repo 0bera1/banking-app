@@ -1,11 +1,10 @@
 import { DatabaseService } from '../database/database.service';
-import { User } from './entities/user.entity';
 export declare class UsersService {
     private readonly databaseService;
     constructor(databaseService: DatabaseService);
-    create(userData: Partial<User>): Promise<User>;
+    create(userData: any): Promise<any>;
     remove(id: number): Promise<void>;
-    findOne(id: number): Promise<User>;
-    findByEmail(email: string): Promise<User>;
-    update(id: number, userData: Partial<User>): Promise<User>;
+    findOne(id: number): Promise<any>;
+    findByEmail(email: string): Promise<any>;
+    update(id: number, userData: any): Promise<any>;
 }

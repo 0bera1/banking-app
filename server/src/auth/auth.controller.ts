@@ -1,7 +1,12 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/entities/user.entity';
+
+interface User {
+  id: number;
+  email: string;
+  password_hash: string;
+}
 
 @Controller('auth')
 export class AuthController {
@@ -12,21 +17,12 @@ export class AuthController {
 
     // Giriş işlemi
     @Post('login')
-    async login(@Body() loginData: { email: string; password: string }) {
-        try {
-            const user = await this.authService.validateUser(loginData.email, loginData.password);
-            
-            if (!user) {
-                throw new HttpException('Invalid email or password', HttpStatus.UNAUTHORIZED);
-            }
-
-            return this.authService.login(user);
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new HttpException('Error logging in', HttpStatus.INTERNAL_SERVER_ERROR);
+    async login(@Body() loginDto: { email: string; password: string }) {
+        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+        if (!user) {
+            throw new UnauthorizedException('Invalid credentials');
         }
+        return this.authService.login(user);
     }
 
     // Kayıt işlemi

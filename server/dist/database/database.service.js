@@ -15,11 +15,11 @@ const pg_1 = require("pg");
 let DatabaseService = class DatabaseService {
     constructor() {
         this.pool = new pg_1.Pool({
-            user: 'postgres',
-            host: 'localhost',
-            database: 'banking_app',
-            password: 'postgres',
-            port: 5432,
+            user: process.env.DB_USER || 'postgres',
+            host: process.env.DB_HOST || 'localhost',
+            database: process.env.DB_NAME || 'banking_app',
+            password: process.env.DB_PASSWORD || 'postgres',
+            port: parseInt(process.env.DB_PORT || '5432'),
         });
     }
     async query(text, params) {
@@ -39,6 +39,43 @@ let DatabaseService = class DatabaseService {
     }
     async getClient() {
         return await this.pool.connect();
+    }
+    async beginTransaction(client) {
+        await client.query('BEGIN');
+    }
+    async commitTransaction(client) {
+        await client.query('COMMIT');
+    }
+    async rollbackTransaction(client) {
+        await client.query('ROLLBACK');
+    }
+    async findOne(table, id) {
+        const result = await this.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+        return result.rows[0];
+    }
+    async findAll(table) {
+        const result = await this.query(`SELECT * FROM ${table}`);
+        return result.rows;
+    }
+    async create(table, data) {
+        const columns = Object.keys(data).join(', ');
+        const values = Object.values(data);
+        const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+        const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`;
+        const result = await this.query(query, values);
+        return result.rows[0];
+    }
+    async update(table, id, data) {
+        const setClause = Object.keys(data)
+            .map((key, index) => `${key} = $${index + 1}`)
+            .join(', ');
+        const values = [...Object.values(data), id];
+        const query = `UPDATE ${table} SET ${setClause} WHERE id = $${values.length} RETURNING *`;
+        const result = await this.query(query, values);
+        return result.rows[0];
+    }
+    async delete(table, id) {
+        await this.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
     }
 };
 exports.DatabaseService = DatabaseService;

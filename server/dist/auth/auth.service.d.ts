@@ -4,18 +4,7 @@ export declare class AuthService {
     private readonly usersService;
     private readonly jwtService;
     constructor(usersService: UsersService, jwtService: JwtService);
-    register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<{
-        id: number;
-        username: string;
-        email: string;
-        first_name: string;
-        last_name: string;
-        role: "admin" | "user";
-        created_at: Date;
-        updated_at: Date;
-        last_login_at?: Date;
-        is_active: boolean;
-    }>;
+    register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<any>;
     validateUser(email: string, password: string): Promise<any>;
     login(user: any): Promise<{
         access_token: string;

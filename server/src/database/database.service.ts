@@ -9,18 +9,18 @@ export class DatabaseService {
 
   constructor() {
     this.pool = new Pool({
-      user: 'postgres', // PostgreSQL kullanıcı adı
-      host: 'localhost', // PostgreSQL sunucu adresi
-      database: 'banking_app', // Veritabanı adı
-      password: 'postgres', // PostgreSQL şifresi
-      port: 5432, // PostgreSQL port numarası
+      user: process.env.DB_USER || 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      database: process.env.DB_NAME || 'banking_app',
+      password: process.env.DB_PASSWORD || 'postgres',
+      port: parseInt(process.env.DB_PORT || '5432'),
     });
   }
 
   // Veritabanı sorgularını çalıştırmak için genel bir metot
   // text: SQL sorgusu
   // params: Sorgu parametreleri (SQL injection'ı önlemek için)
-  async query(text: string, params?: any[]) {
+  async query(text: string, params?: any[]): Promise<any> {
     // Sorgu başlangıç zamanını kaydediyoruz (performans ölçümü için)
     const start = Date.now();
     try {
@@ -42,5 +42,53 @@ export class DatabaseService {
   // Transaction yönetimi için client alma metodu
   async getClient(): Promise<PoolClient> {
     return await this.pool.connect();
+  }
+
+  async beginTransaction(client: PoolClient): Promise<void> {
+    await client.query('BEGIN');
+  }
+
+  async commitTransaction(client: PoolClient): Promise<void> {
+    await client.query('COMMIT');
+  }
+
+  async rollbackTransaction(client: PoolClient): Promise<void> {
+    await client.query('ROLLBACK');
+  }
+
+  async findOne(table: string, id: number): Promise<any> {
+    const result = await this.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+    return result.rows[0];
+  }
+
+  async findAll(table: string): Promise<any[]> {
+    const result = await this.query(`SELECT * FROM ${table}`);
+    return result.rows;
+  }
+
+  async create(table: string, data: Record<string, any>): Promise<any> {
+    const columns = Object.keys(data).join(', ');
+    const values = Object.values(data);
+    const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+    
+    const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`;
+    const result = await this.query(query, values);
+    return result.rows[0];
+  }
+
+  async update(table: string, id: number, data: Record<string, any>): Promise<any> {
+    const setClause = Object.keys(data)
+      .map((key, index) => `${key} = $${index + 1}`)
+      .join(', ');
+    
+    const values = [...Object.values(data), id];
+    const query = `UPDATE ${table} SET ${setClause} WHERE id = $${values.length} RETURNING *`;
+    
+    const result = await this.query(query, values);
+    return result.rows[0];
+  }
+
+  async delete(table: string, id: number): Promise<void> {
+    await this.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
   }
 }

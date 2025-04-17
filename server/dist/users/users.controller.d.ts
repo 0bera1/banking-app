@@ -1,10 +1,9 @@
 import { UsersService } from './users.service';
-import { User } from './entities/user.entity';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
-    create(userData: Partial<User>): Promise<User>;
-    findOne(id: string): Promise<User>;
-    update(id: string, userData: Partial<User>): Promise<User>;
+    create(createUserDto: any): Promise<any>;
+    findOne(id: string): Promise<any>;
+    update(id: string, updateUserDto: any): Promise<any>;
     remove(id: string): Promise<void>;
 }

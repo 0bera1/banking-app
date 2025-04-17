@@ -13,8 +13,8 @@ export class TransactionsController {
     async create(@Request() req, @Body() createTransactionDto: CreateTransactionDto) {
         return await this.transactionsService.createTransaction(
             req.user.id,
-            createTransactionDto.senderAccountId,
-            createTransactionDto.receiverIban,
+            createTransactionDto.sender_id,
+            createTransactionDto.receiver_iban,
             createTransactionDto.amount,
             createTransactionDto.currency,
             createTransactionDto.description
