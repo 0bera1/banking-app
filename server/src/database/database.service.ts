@@ -20,7 +20,7 @@ export class DatabaseService {
   // Veritabanı sorgularını çalıştırmak için genel bir metot
   // text: SQL sorgusu
   // params: Sorgu parametreleri (SQL injection'ı önlemek için)
-  async query(text: string, params?: any[]): Promise<any> {
+  async query(text: string, params?: any): Promise<any> {
     // Sorgu başlangıç zamanını kaydediyoruz (performans ölçümü için)
     const start = Date.now();
     try {

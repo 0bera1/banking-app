@@ -115,8 +115,11 @@ export const CreateTransactionForm = ({ onClose, onSuccess }: CreateTransactionF
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          ...data,
-          currency: senderAccount.currency
+          sender_id: data.senderAccountId,
+          receiver_iban: data.receiverIban,
+          amount: data.amount,
+          currency: senderAccount.currency,
+          description: data.description
         }),
       });
 

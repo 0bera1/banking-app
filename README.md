@@ -167,7 +167,7 @@ Performans İyileştirmeleri:
 ### Audit Log
 - `GET /audit` - Log kayıtlarını görüntüleme 
 
-# Bilgi :
+### Bilgi :
 
 - Database'de `client` alma metodunu kullanmamız gereken durumlar:
     - Birden fazla tabloyu etkileyen işlemlerde

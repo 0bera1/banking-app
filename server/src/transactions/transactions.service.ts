@@ -23,89 +23,114 @@ export class TransactionsService {
         currency: string,
         description?: string,
     ) {
-        // Gönderen hesabı kontrol et
-        const fromAccountQuery = `
-            SELECT * FROM accounts 
-            WHERE id = $1 AND user_id = $2
-        `;
-        const fromAccountResult = await this.databaseService.query(fromAccountQuery, [fromAccountId, userId]);
-        const fromAccount = fromAccountResult.rows[0];
-
-        if (!fromAccount) {
-            throw new HttpException('Gönderen hesap bulunamadı', HttpStatus.NOT_FOUND);
-        }
-
-        // Alıcı hesabı IBAN ile bul
-        const toAccountQuery = `
-            SELECT * FROM accounts 
-            WHERE iban = $1
-        `;
-        const toAccountResult = await this.databaseService.query(toAccountQuery, [receiverIban]);
-        const toAccount = toAccountResult.rows[0];
-
-        if (!toAccount) {
-            throw new HttpException('Alıcı hesap bulunamadı', HttpStatus.NOT_FOUND);
-        }
-
-        // Bakiye kontrolü
-        if (fromAccount.balance < amount) {
-            throw new HttpException('Yetersiz bakiye', HttpStatus.BAD_REQUEST);
-        }
-
-        // Para birimi kontrolü
-        if (fromAccount.currency !== currency || toAccount.currency !== currency) {
-            throw new HttpException(
-                'Para birimi uyuşmazlığı',
-                HttpStatus.BAD_REQUEST,
-            );
-        }
-
-        // Transaction başlat
-        const client = await this.databaseService.getClient();
         try {
-            await client.query('BEGIN');
-
-            // Gönderen hesabın bakiyesini güncelle
-            const updateFromAccountQuery = `
-                UPDATE accounts 
-                SET balance = balance - $1 
-                WHERE id = $2 
-                RETURNING *
+            // Gönderen hesabı kontrol et
+            const fromAccountQuery = `
+                SELECT * FROM accounts 
+                WHERE id = $1 AND user_id = $2
             `;
-            await client.query(updateFromAccountQuery, [amount, fromAccountId]);
+            const fromAccountResult = await this.databaseService.query(fromAccountQuery, [fromAccountId, userId]);
+            const fromAccount = fromAccountResult.rows[0];
+            console.log("--------------------------------");
+            console.log(fromAccountResult);
+            console.log("--------------------------------");
 
-            // Alıcı hesabın bakiyesini güncelle
-            const updateToAccountQuery = `
-                UPDATE accounts 
-                SET balance = balance + $1 
-                WHERE id = $2 
-                RETURNING *
+            if (!fromAccount) {
+                throw new HttpException('Gönderen hesap bulunamadı', HttpStatus.NOT_FOUND);
+            }
+
+            // Gönderen hesabın durumunu kontrol et
+            if (fromAccount.status !== 'active') {
+                throw new HttpException('Gönderen hesap aktif değil', HttpStatus.BAD_REQUEST);
+            }
+
+            // Alıcı hesabı IBAN ile bul
+            const toAccountQuery = `
+                SELECT * FROM accounts 
+                WHERE iban = $1
             `;
-            await client.query(updateToAccountQuery, [amount, toAccount.id]);
+            const toAccountResult = await this.databaseService.query(toAccountQuery, [receiverIban]);
+            const toAccount = toAccountResult.rows[0];
 
-            // İşlem kaydını oluştur
-            const createTransactionQuery = `
-                INSERT INTO transactions 
-                (sender_id, receiver_id, amount, currency, description, status)
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING *
-            `;
-            const transactionResult = await client.query(createTransactionQuery, [
-                fromAccountId,
-                toAccount.id,
-                amount,
-                currency,
-                description,
-                'completed'
-            ]);
+            if (!toAccount) {
+                throw new HttpException('Alıcı hesap bulunamadı', HttpStatus.NOT_FOUND);
+            }
 
-            await client.query('COMMIT');
-            return transactionResult.rows[0];
+            // Alıcı hesabın durumunu kontrol et
+            if (toAccount.status !== 'active') {
+                throw new HttpException('Alıcı hesap aktif değil', HttpStatus.BAD_REQUEST);
+            }
+
+            // Bakiye kontrolü
+            if (fromAccount.balance < amount) {
+                throw new HttpException('Yetersiz bakiye', HttpStatus.BAD_REQUEST);
+            }
+
+            // Para birimi kontrolü
+            if (fromAccount.currency !== currency || toAccount.currency !== currency) {
+                throw new HttpException('Para birimi uyuşmazlığı', HttpStatus.BAD_REQUEST);
+            }
+
+            // Transaction başlat
+            const client = await this.databaseService.getClient();
+            try {
+                await client.query('BEGIN');
+
+                // Gönderen hesabın bakiyesini güncelle
+                const updateFromAccountQuery = `
+                    UPDATE accounts 
+                    SET balance = balance - $1 
+                    WHERE id = $2 
+                    RETURNING *
+                `;
+                await client.query(updateFromAccountQuery, [amount, fromAccountId]);
+
+                // Alıcı hesabın bakiyesini güncelle
+                const updateToAccountQuery = `
+                    UPDATE accounts 
+                    SET balance = balance + $1 
+                    WHERE id = $2 
+                    RETURNING *
+                `;
+                await client.query(updateToAccountQuery, [amount, toAccount.id]);
+
+                // İşlem kaydını oluştur
+                const createTransactionQuery = `
+                    INSERT INTO transactions 
+                    (sender_id, receiver_id, amount, currency, description, status)
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    RETURNING *
+                `;
+                const transactionResult = await client.query(createTransactionQuery, [
+                    fromAccountId,
+                    toAccount.id,
+                    amount,
+                    currency,
+                    description,
+                    'completed'
+                ]);
+
+                await client.query('COMMIT');
+                return transactionResult.rows[0];
+            } catch (error) {
+                await client.query('ROLLBACK');
+                console.error('Transaction hatası:', error);
+                throw new HttpException(
+                    `İşlem sırasında bir hata oluştu: ${error.message}`,
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                );
+            } finally {
+                client.release();
+            }
         } catch (error) {
-            await client.query('ROLLBACK');
-            throw error;
-        } finally {
-            client.release();
+            console.error('Genel hata:', error);
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            throw new HttpException(
+                `Beklenmeyen bir hata oluştu: ${error.message}`,
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
         }
     }
 
