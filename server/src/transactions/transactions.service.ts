@@ -10,9 +10,9 @@ import { TransactionLimitsService } from './transaction-limits.service';
 export class TransactionsService {
     constructor(
         private readonly databaseService: DatabaseService,
-        private readonly exchangeService: ExchangeService,
-        private readonly auditService: AuditService,
-        private readonly transactionLimitsService: TransactionLimitsService,
+        // private readonly exchangeService: ExchangeService,
+        // private readonly auditService: AuditService,
+        // private readonly transactionLimitsService: TransactionLimitsService,
     ) {}
 
     async createTransaction(
