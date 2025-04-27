@@ -1,21 +1,43 @@
-import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import { NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsDto } from './dto/get-transactions.dto';
-import { ExchangeService } from '../exchange/exchange.service';
-import { AuditService } from '../audit/audit.service';
+import { ExchangeService, IExchangeService } from '../exchange/exchange.service';
+import { AuditService, IAuditService } from '../audit/audit.service';
 import { TransactionLimitsService } from './transaction-limits.service';
 
-@Injectable()
-export class TransactionsService {
-    constructor(
-        private readonly databaseService: DatabaseService,
-        // private readonly exchangeService: ExchangeService,
-        // private readonly auditService: AuditService,
-        // private readonly transactionLimitsService: TransactionLimitsService,
-    ) {}
+export interface ITransactionsService {
+    createTransaction(
+        userId: number,
+        fromAccountId: number,
+        receiverIban: string,
+        amount: number,
+        currency: string,
+        description?: string,
+    ): Promise<any>;
+    getTransactions(getTransactionsDto: GetTransactionsDto): Promise<any[]>;
+    getTransactionsByUserId(userId: number): Promise<any[]>;
+}
 
-    async createTransaction(
+export class TransactionsService implements ITransactionsService {
+    private readonly databaseService: DatabaseService;
+    private readonly exchangeService: IExchangeService;
+    private readonly auditService: IAuditService;
+    private readonly transactionLimitsService: TransactionLimitsService;
+
+    public constructor(
+        databaseService: DatabaseService,
+        exchangeService: IExchangeService,
+        auditService: IAuditService,
+        transactionLimitsService: TransactionLimitsService,
+    ) {
+        this.databaseService = databaseService;
+        this.exchangeService = exchangeService;
+        this.auditService = auditService;
+        this.transactionLimitsService = transactionLimitsService;
+    }
+
+    public async createTransaction(
         userId: number,
         fromAccountId: number,
         receiverIban: string,
@@ -23,17 +45,17 @@ export class TransactionsService {
         currency: string,
         description?: string,
     ) {
+        const client = await this.databaseService.getClient();
         try {
+            await client.query('BEGIN');
+
             // Gönderen hesabı kontrol et
             const fromAccountQuery = `
                 SELECT * FROM accounts 
                 WHERE id = $1 AND user_id = $2
             `;
-            const fromAccountResult = await this.databaseService.query(fromAccountQuery, [fromAccountId, userId]);
+            const fromAccountResult = await client.query(fromAccountQuery, [fromAccountId, userId]);
             const fromAccount = fromAccountResult.rows[0];
-            console.log("--------------------------------");
-            console.log(fromAccountResult);
-            console.log("--------------------------------");
 
             if (!fromAccount) {
                 throw new HttpException('Gönderen hesap bulunamadı', HttpStatus.NOT_FOUND);
@@ -49,7 +71,7 @@ export class TransactionsService {
                 SELECT * FROM accounts 
                 WHERE iban = $1
             `;
-            const toAccountResult = await this.databaseService.query(toAccountQuery, [receiverIban]);
+            const toAccountResult = await client.query(toAccountQuery, [receiverIban]);
             const toAccount = toAccountResult.rows[0];
 
             if (!toAccount) {
@@ -71,90 +93,122 @@ export class TransactionsService {
                 throw new HttpException('Para birimi uyuşmazlığı', HttpStatus.BAD_REQUEST);
             }
 
-            // Transaction başlat
-            const client = await this.databaseService.getClient();
-            try {
-                await client.query('BEGIN');
+            // Transaction limit kontrolü
+            const isWithinLimit = await this.transactionLimitsService.checkSingleTransactionLimit(
+                userId,
+                amount,
+                currency
+            );
 
-                // Gönderen hesabın bakiyesini güncelle
-                const updateFromAccountQuery = `
-                    UPDATE accounts 
-                    SET balance = balance - $1 
-                    WHERE id = $2 
-                    RETURNING *
-                `;
-                await client.query(updateFromAccountQuery, [amount, fromAccountId]);
+            if (!isWithinLimit) {
+                throw new HttpException('İşlem limiti aşıldı', HttpStatus.BAD_REQUEST);
+            }
 
-                // Alıcı hesabın bakiyesini güncelle
-                const updateToAccountQuery = `
-                    UPDATE accounts 
-                    SET balance = balance + $1 
-                    WHERE id = $2 
-                    RETURNING *
-                `;
-                await client.query(updateToAccountQuery, [amount, toAccount.id]);
+            // Gönderen hesabın bakiyesini güncelle
+            const updateFromAccountQuery = `
+                UPDATE accounts 
+                SET balance = balance - $1 
+                WHERE id = $2 
+                RETURNING *
+            `;
+            await client.query(updateFromAccountQuery, [amount, fromAccountId]);
 
-                // İşlem kaydını oluştur
-                const createTransactionQuery = `
-                    INSERT INTO transactions 
-                    (sender_id, receiver_id, amount, currency, description, status)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                    RETURNING *
-                `;
-                const transactionResult = await client.query(createTransactionQuery, [
-                    fromAccountId,
-                    toAccount.id,
+            // Alıcı hesabın bakiyesini güncelle
+            const updateToAccountQuery = `
+                UPDATE accounts 
+                SET balance = balance + $1 
+                WHERE id = $2 
+                RETURNING *
+            `;
+            await client.query(updateToAccountQuery, [amount, toAccount.id]);
+
+            // İşlem kaydını oluştur
+            const createTransactionQuery = `
+                INSERT INTO transactions 
+                (sender_id, receiver_id, amount, currency, description, status)
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING *
+            `;
+            const transactionResult = await client.query(createTransactionQuery, [
+                fromAccountId,
+                toAccount.id,
+                amount,
+                currency,
+                description,
+                'completed'
+            ]);
+
+            // Audit log kaydı
+            await this.auditService.log(
+                'TRANSACTION_CREATE',
+                'transactions',
+                transactionResult.rows[0].id.toString(),
+                null,
+                {
+                    sender_id: fromAccountId,
+                    receiver_id: toAccount.id,
                     amount,
                     currency,
                     description,
-                    'completed'
-                ]);
+                    status: 'completed'
+                },
+                userId.toString()
+            );
 
-                await client.query('COMMIT');
-                return transactionResult.rows[0];
-            } catch (error) {
-                await client.query('ROLLBACK');
-                console.error('Transaction hatası:', error);
-                throw new HttpException(
-                    `İşlem sırasında bir hata oluştu: ${error.message}`,
-                    HttpStatus.INTERNAL_SERVER_ERROR
-                );
-            } finally {
-                client.release();
-            }
+            await client.query('COMMIT');
+            return transactionResult.rows[0];
         } catch (error) {
-            console.error('Genel hata:', error);
+            await client.query('ROLLBACK');
+            console.error('Transaction hatası:', error);
+            
             if (error instanceof HttpException) {
                 throw error;
             }
+            
             throw new HttpException(
-                `Beklenmeyen bir hata oluştu: ${error.message}`,
-                HttpStatus.INTERNAL_SERVER_ERROR
+                error.message || 'İşlem sırasında bir hata oluştu',
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        } finally {
+            client.release();
+        }
+    }
+
+    public async getTransactions(getTransactionsDto: GetTransactionsDto) {
+        try {
+            if (!getTransactionsDto.account_id) {
+                throw new HttpException('Hesap ID\'si gereklidir', HttpStatus.BAD_REQUEST);
+            }
+
+            const query = `
+                SELECT t.*, 
+                       a1.card_holder_name as sender_name,
+                       a2.card_holder_name as receiver_name
+                FROM transactions t
+                LEFT JOIN accounts a1 ON t.sender_id = a1.id
+                LEFT JOIN accounts a2 ON t.receiver_id = a2.id
+                WHERE t.sender_id = $1 OR t.receiver_id = $1
+                ORDER BY t.created_at DESC
+                LIMIT $2 OFFSET $3
+            `;
+            const values = [
+                getTransactionsDto.account_id,
+                getTransactionsDto.limit || 10,
+                getTransactionsDto.offset || 0
+            ];
+            
+            const result = await this.databaseService.query(query, values);
+            return result.rows;
+        } catch (error) {
+            console.error('İşlemler getirilirken hata:', error);
+            throw new HttpException(
+                error.message || 'İşlemler getirilirken bir hata oluştu',
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
     }
 
-    async getTransactions(getTransactionsDto: GetTransactionsDto) {
-        const query = `
-            SELECT t.*, 
-                   a1.card_holder_name as sender_name,
-                   a2.card_holder_name as receiver_name
-            FROM transactions t
-            LEFT JOIN accounts a1 ON t.sender_id = a1.id
-            LEFT JOIN accounts a2 ON t.receiver_id = a2.id
-            WHERE t.sender_id = $1 OR t.receiver_id = $1
-            ORDER BY t.created_at DESC
-            LIMIT $2 OFFSET $3
-        `;
-        const values = [
-            getTransactionsDto.account_id,
-            getTransactionsDto.limit || 10,
-            getTransactionsDto.offset || 0
-        ];
-        return this.databaseService.query(query, values);
-    }
-
-    async getTransactionsByUserId(userId: number) {
+    public async getTransactionsByUserId(userId: number) {
         try {
             const query = `
                 SELECT 

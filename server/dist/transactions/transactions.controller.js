@@ -16,45 +16,76 @@ exports.TransactionsController = void 0;
 const common_1 = require("@nestjs/common");
 const transactions_service_1 = require("./transactions.service");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const database_service_1 = require("../database/database.service");
 let TransactionsController = class TransactionsController {
-    constructor(transactionsService) {
+    constructor(transactionsService, databaseService) {
         this.transactionsService = transactionsService;
+        this.databaseService = databaseService;
     }
-    async create(req, createTransactionDto) {
-        return await this.transactionsService.createTransaction(req.user.id, createTransactionDto.sender_id, createTransactionDto.receiver_iban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
-    }
-    async getTransactions(req) {
+    async create(createTransactionDto, req) {
         try {
-            const userId = req.user.id;
-            return await this.transactionsService.getTransactionsByUserId(userId);
+            return await this.transactionsService.createTransaction(req.user.id, createTransactionDto.from_account_id, createTransactionDto.receiver_iban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
         }
         catch (error) {
-            if (error instanceof common_1.HttpException) {
-                throw error;
+            throw new common_1.HttpException(error.message || 'İşlem oluşturulurken bir hata oluştu', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async findAll(queryParams, req) {
+        try {
+            const accountQuery = `
+                SELECT id FROM accounts 
+                WHERE user_id = $1 AND status = 'active' 
+                ORDER BY created_at DESC 
+                LIMIT 1
+            `;
+            const accountResult = await this.databaseService.query(accountQuery, [req.user.id]);
+            if (!accountResult.rows[0]) {
+                throw new common_1.HttpException('Aktif hesap bulunamadı', common_1.HttpStatus.NOT_FOUND);
             }
-            throw new common_1.HttpException('İşlemler getirilirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+            const getTransactionsDto = Object.assign(Object.assign({}, queryParams), { account_id: accountResult.rows[0].id });
+            return await this.transactionsService.getTransactions(getTransactionsDto);
+        }
+        catch (error) {
+            throw new common_1.HttpException(error.message || 'İşlemler getirilirken bir hata oluştu', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+    async findByUserId(req) {
+        try {
+            return await this.transactionsService.getTransactionsByUserId(req.user.id);
+        }
+        catch (error) {
+            throw new common_1.HttpException(error.message || 'Kullanıcı işlemleri getirilirken bir hata oluştu', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 };
 exports.TransactionsController = TransactionsController;
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Body)()),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TransactionsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Request)()),
+    __param(0, (0, common_1.Query)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TransactionsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('user'),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], TransactionsController.prototype, "getTransactions", null);
+], TransactionsController.prototype, "findByUserId", null);
 exports.TransactionsController = TransactionsController = __decorate([
     (0, common_1.Controller)('transactions'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [transactions_service_1.TransactionsService])
+    __metadata("design:paramtypes", [transactions_service_1.TransactionsService,
+        database_service_1.DatabaseService])
 ], TransactionsController);
 //# sourceMappingURL=transactions.controller.js.map

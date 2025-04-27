@@ -1,8 +1,15 @@
 import { Module } from '@nestjs/common';
 import { DatabaseService } from './database.service';
 
+const databaseServiceInstance = new DatabaseService();
+
 @Module({
-  providers: [DatabaseService],
+  providers: [
+    {
+      provide: DatabaseService,
+      useValue: databaseServiceInstance,
+    },
+  ],
   exports: [DatabaseService],
 })
 export class DatabaseModule {}

@@ -8,12 +8,27 @@ export class DatabaseService {
   private pool: Pool;
 
   constructor() {
+    console.log('Initializing database connection with config:', {
+        user: process.env.DB_USER || 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        database: process.env.DB_NAME || 'banking_app',
+        port: parseInt(process.env.DB_PORT || '5432')
+    });
+
     this.pool = new Pool({
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'banking_app',
-      password: process.env.DB_PASSWORD || 'postgres',
-      port: parseInt(process.env.DB_PORT || '5432'),
+        user: process.env.DB_USER || 'postgres',
+        host: process.env.DB_HOST || 'localhost',
+        database: process.env.DB_NAME || 'banking_app',
+        password: process.env.DB_PASSWORD || 'postgres',
+        port: parseInt(process.env.DB_PORT || '5432'),
+    });
+
+    this.pool.on('error', (err) => {
+        console.error('Unexpected error on idle client', err);
+    });
+
+    this.pool.on('connect', () => {
+        console.log('New client connected to database');
     });
   }
 
@@ -21,21 +36,37 @@ export class DatabaseService {
   // text: SQL sorgusu
   // params: Sorgu parametreleri (SQL injection'ı önlemek için)
   async query(text: string, params?: any): Promise<any> {
-    // Sorgu başlangıç zamanını kaydediyoruz (performans ölçümü için)
     const start = Date.now();
     try {
-      // Sorguyu çalıştırıyoruz ve sonucu bekliyoruz
-      console.log('Executing query:', text);
-      console.log('With params:', params);
-      const res = await this.pool.query(text, params);
-      // Sorgu süresini hesaplıyoruz
-      const duration = Date.now() - start;
-      // Sorgu bilgilerini konsola yazdırıyoruz (debugging için)
-      console.log('Query executed successfully', { text, duration, rows: res.rowCount });
-      return res;
+        console.log('Executing query:', text);
+        console.log('With params:', params);
+        
+        if (!this.pool) {
+            console.error('Database pool is not initialized');
+            throw new Error('Veritabanı bağlantısı başlatılmadı');
+        }
+        
+        const res = await this.pool.query(text, params);
+        const duration = Date.now() - start;
+        console.log('Query executed successfully', {
+            text,
+            params,
+            duration,
+            rowCount: res.rowCount,
+            rows: res.rows
+        });
+        return res;
     } catch (error) {
-      console.error('Error executing query:', error);
-      throw error;
+        console.error('Error executing query:', {
+            text,
+            params,
+            error: {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            }
+        });
+        throw error;
     }
   }
 

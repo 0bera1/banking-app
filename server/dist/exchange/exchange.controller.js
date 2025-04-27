@@ -15,22 +15,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExchangeController = void 0;
 const common_1 = require("@nestjs/common");
 const exchange_service_1 = require("./exchange.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 let ExchangeController = class ExchangeController {
     constructor(exchangeService) {
         this.exchangeService = exchangeService;
     }
-    async getExchangeRate(fromCurrency, toCurrency) {
-        const rate = await this.exchangeService.getExchangeRate(fromCurrency, toCurrency);
-        return { rate };
+    getExchangeRate(fromCurrency, toCurrency) {
+        return this.exchangeService.getExchangeRate(fromCurrency, toCurrency);
     }
-    async convertAmount(amount, fromCurrency, toCurrency) {
-        const convertedAmount = await this.exchangeService.convertAmount(amount, fromCurrency, toCurrency);
-        return { amount: convertedAmount };
+    convertAmount(amount, fromCurrency, toCurrency) {
+        return this.exchangeService.convertAmount(amount, fromCurrency, toCurrency);
     }
     getSupportedCurrencies() {
-        return {
-            currencies: this.exchangeService.getSupportedCurrencies(),
-        };
+        return this.exchangeService.getSupportedCurrencies();
     }
 };
 exports.ExchangeController = ExchangeController;
@@ -40,7 +37,7 @@ __decorate([
     __param(1, (0, common_1.Query)('to')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], ExchangeController.prototype, "getExchangeRate", null);
 __decorate([
     (0, common_1.Get)('convert'),
@@ -49,7 +46,7 @@ __decorate([
     __param(2, (0, common_1.Query)('to')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number, String, String]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], ExchangeController.prototype, "convertAmount", null);
 __decorate([
     (0, common_1.Get)('currencies'),
@@ -59,6 +56,7 @@ __decorate([
 ], ExchangeController.prototype, "getSupportedCurrencies", null);
 exports.ExchangeController = ExchangeController = __decorate([
     (0, common_1.Controller)('exchange'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __metadata("design:paramtypes", [exchange_service_1.ExchangeService])
 ], ExchangeController);
 //# sourceMappingURL=exchange.controller.js.map

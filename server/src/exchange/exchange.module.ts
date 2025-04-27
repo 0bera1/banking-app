@@ -1,12 +1,19 @@
 import { Module } from '@nestjs/common';
 import { ExchangeService } from './exchange.service';
 import { ExchangeController } from './exchange.controller';
-import { DatabaseModule } from '../database/database.module';
+import { DatabaseService } from '../database/database.service';
+
+const exchangeServiceInstance = new ExchangeService(new DatabaseService());
 
 @Module({
-  imports: [DatabaseModule],
   controllers: [ExchangeController],
-  providers: [ExchangeService],
+  providers: [
+    {
+      provide: ExchangeService,
+      useValue: exchangeServiceInstance,
+    },
+    DatabaseService,
+  ],
   exports: [ExchangeService],
 })
 export class ExchangeModule {} 

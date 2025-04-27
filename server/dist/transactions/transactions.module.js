@@ -10,24 +10,35 @@ exports.TransactionsModule = void 0;
 const common_1 = require("@nestjs/common");
 const transactions_service_1 = require("./transactions.service");
 const transactions_controller_1 = require("./transactions.controller");
-const database_module_1 = require("../database/database.module");
-const exchange_module_1 = require("../exchange/exchange.module");
-const audit_module_1 = require("../audit/audit.module");
-const transaction_limits_module_1 = require("./transaction-limits.module");
+const database_service_1 = require("../database/database.service");
+const exchange_service_1 = require("../exchange/exchange.service");
+const audit_service_1 = require("../audit/audit.service");
+const transaction_limits_service_1 = require("./transaction-limits.service");
+const databaseService = new database_service_1.DatabaseService();
+const exchangeService = new exchange_service_1.ExchangeService(databaseService);
+const auditService = new audit_service_1.AuditService(databaseService);
+const transactionLimitsService = new transaction_limits_service_1.TransactionLimitsService(databaseService, exchangeService);
+const transactionsServiceInstance = new transactions_service_1.TransactionsService(databaseService, exchangeService, auditService, transactionLimitsService);
 let TransactionsModule = class TransactionsModule {
 };
 exports.TransactionsModule = TransactionsModule;
 exports.TransactionsModule = TransactionsModule = __decorate([
     (0, common_1.Module)({
-        imports: [
-            database_module_1.DatabaseModule,
-            exchange_module_1.ExchangeModule,
-            audit_module_1.AuditModule,
-            transaction_limits_module_1.TransactionLimitsModule,
-        ],
         controllers: [transactions_controller_1.TransactionsController],
-        providers: [transactions_service_1.TransactionsService],
-        exports: [transactions_service_1.TransactionsService],
+        providers: [
+            {
+                provide: database_service_1.DatabaseService,
+                useValue: databaseService
+            },
+            {
+                provide: transactions_service_1.TransactionsService,
+                useValue: transactionsServiceInstance
+            },
+            exchange_service_1.ExchangeService,
+            audit_service_1.AuditService,
+            transaction_limits_service_1.TransactionLimitsService
+        ],
+        exports: [transactions_service_1.TransactionsService]
     })
 ], TransactionsModule);
 //# sourceMappingURL=transactions.module.js.map

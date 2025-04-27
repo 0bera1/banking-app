@@ -1,20 +1,37 @@
 import { Module } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
-import { DatabaseModule } from '../database/database.module';
-import { ExchangeModule } from '../exchange/exchange.module';
-import { AuditModule } from '../audit/audit.module';
-import { TransactionLimitsModule } from './transaction-limits.module';
+import { DatabaseService } from '../database/database.service';
+import { ExchangeService } from '../exchange/exchange.service';
+import { AuditService } from '../audit/audit.service';
+import { TransactionLimitsService } from './transaction-limits.service';
+
+const databaseService = new DatabaseService();
+const exchangeService = new ExchangeService(databaseService);
+const auditService = new AuditService(databaseService);
+const transactionLimitsService = new TransactionLimitsService(databaseService, exchangeService);
+const transactionsServiceInstance = new TransactionsService(
+    databaseService,
+    exchangeService,
+    auditService,
+    transactionLimitsService
+);
 
 @Module({
-  imports: [
-    DatabaseModule,
-    ExchangeModule,
-    AuditModule,
-    TransactionLimitsModule,
-  ],
-  controllers: [TransactionsController],
-  providers: [TransactionsService],
-  exports: [TransactionsService],
+    controllers: [TransactionsController],
+    providers: [
+        {
+            provide: DatabaseService,
+            useValue: databaseService
+        },
+        {
+            provide: TransactionsService,
+            useValue: transactionsServiceInstance
+        },
+        ExchangeService,
+        AuditService,
+        TransactionLimitsService
+    ],
+    exports: [TransactionsService]
 })
 export class TransactionsModule {}

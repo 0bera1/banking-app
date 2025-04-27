@@ -10,15 +10,21 @@ exports.ExchangeModule = void 0;
 const common_1 = require("@nestjs/common");
 const exchange_service_1 = require("./exchange.service");
 const exchange_controller_1 = require("./exchange.controller");
-const database_module_1 = require("../database/database.module");
+const database_service_1 = require("../database/database.service");
+const exchangeServiceInstance = new exchange_service_1.ExchangeService(new database_service_1.DatabaseService());
 let ExchangeModule = class ExchangeModule {
 };
 exports.ExchangeModule = ExchangeModule;
 exports.ExchangeModule = ExchangeModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule],
         controllers: [exchange_controller_1.ExchangeController],
-        providers: [exchange_service_1.ExchangeService],
+        providers: [
+            {
+                provide: exchange_service_1.ExchangeService,
+                useValue: exchangeServiceInstance,
+            },
+            database_service_1.DatabaseService,
+        ],
         exports: [exchange_service_1.ExchangeService],
     })
 ], ExchangeModule);

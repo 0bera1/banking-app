@@ -5,7 +5,15 @@ interface LogActionParams {
     action: string;
     details: Record<string, any>;
 }
-export declare class AuditService {
+export interface IAuditService {
+    logAction(params: LogActionParams): Promise<void>;
+    log(action: string, tableName: string, recordId: string, oldData?: Record<string, any>, newData?: Record<string, any>, userId?: string, ipAddress?: string, userAgent?: string): Promise<void>;
+    getLogs(tableName?: string, recordId?: string, action?: string, startDate?: Date, endDate?: Date, limit?: number, offset?: number): Promise<{
+        logs: AuditLog[];
+        total: number;
+    }>;
+}
+export declare class AuditService implements IAuditService {
     private readonly databaseService;
     constructor(databaseService: DatabaseService);
     logAction({ userId, action, details }: LogActionParams): Promise<void>;

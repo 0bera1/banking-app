@@ -1,20 +1,8 @@
 "use strict";
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-var __metadata = (this && this.__metadata) || function (k, v) {
-    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountsService = void 0;
 const common_1 = require("@nestjs/common");
-const database_service_1 = require("../database/database.service");
-const users_service_1 = require("../users/users.service");
-const exchange_service_1 = require("../exchange/exchange.service");
-let AccountsService = class AccountsService {
+class AccountsService {
     constructor(databaseService, usersService, exchangeService) {
         this.databaseService = databaseService;
         this.usersService = usersService;
@@ -134,9 +122,29 @@ let AccountsService = class AccountsService {
         return result.rows[0];
     }
     async findByUserId(user_id) {
-        const query = 'SELECT * FROM accounts WHERE user_id = $1';
-        const result = await this.databaseService.query(query, [user_id]);
-        return result.rows;
+        try {
+            console.log('Finding accounts for user:', user_id);
+            const query = 'SELECT * FROM accounts WHERE user_id = $1';
+            console.log('Executing query:', query);
+            console.log('With params:', [user_id]);
+            const result = await this.databaseService.query(query, [user_id]);
+            console.log('Query result:', result);
+            if (!result || !result.rows) {
+                console.error('No result or rows from query');
+                return [];
+            }
+            console.log('Found accounts:', result.rows);
+            return result.rows;
+        }
+        catch (error) {
+            console.error('Error in findByUserId:', error);
+            console.error('Error details:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            throw new Error(`Hesaplar getirilirken bir hata oluştu: ${error.message}`);
+        }
     }
     async findByCardNumber(cardNumber) {
         const query = 'SELECT * FROM accounts WHERE card_number = $1';
@@ -253,12 +261,6 @@ let AccountsService = class AccountsService {
         const result = await this.databaseService.query(query, [iban]);
         return result.rows[0];
     }
-};
+}
 exports.AccountsService = AccountsService;
-exports.AccountsService = AccountsService = __decorate([
-    (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [database_service_1.DatabaseService,
-        users_service_1.UsersService,
-        exchange_service_1.ExchangeService])
-], AccountsService);
 //# sourceMappingURL=accounts.service.js.map

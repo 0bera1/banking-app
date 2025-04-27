@@ -1,18 +1,20 @@
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { Account } from './entities/account.entity';
-import { UsersService } from '../users/users.service';
+import { DatabaseService } from '../database/database.service';
 export declare class AccountsController {
     private readonly accountsService;
     private readonly usersService;
-    constructor(accountsService: AccountsService, usersService: UsersService);
-    create(req: any, createAccountDto: CreateAccountDto): Promise<Account>;
-    findOne(req: any, id: string): Promise<Account>;
-    findAll(req: any): Promise<Account[]>;
-    remove(req: any, id: string): Promise<void>;
-    findByCardNumber(req: any, cardNumber: string): Promise<Account>;
+    constructor(accountsService: AccountsService, databaseService: DatabaseService);
+    getUserAccounts(req: any): Promise<Account[]>;
+    getAccountById(req: any, id: string): Promise<Account>;
+    createAccount(req: any, createAccountDto: CreateAccountDto): Promise<Account>;
+    deleteAccount(req: any, id: string): Promise<{
+        message: string;
+    }>;
     deposit(req: any, id: string, amount: number): Promise<any>;
     withdraw(req: any, id: string, amount: number): Promise<any>;
+    findByCardNumber(req: any, cardNumber: string): Promise<Account>;
     getBalance(id: string, currency?: string): Promise<{
         balance: number;
         currency: string;

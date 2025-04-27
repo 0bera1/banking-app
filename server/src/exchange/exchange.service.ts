@@ -1,38 +1,45 @@
-import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 
-@Injectable()
-export class ExchangeService {
-  private exchangeRates: { [key: string]: number } = {
-    USD: 1,
-    EUR: 0.85,
-    TRY: 31.50,
-    GBP: 0.73,
-  };
+export interface IExchangeService {
+    getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number>;
+    convertAmount(amount: number, fromCurrency: string, toCurrency: string): Promise<number>;
+    getSupportedCurrencies(): string[];
+}
 
-  constructor(private readonly databaseService: DatabaseService) {}
+export class ExchangeService implements IExchangeService {
+    private readonly databaseService: DatabaseService;
+    private readonly exchangeRates: { [key: string]: number } = {
+        USD: 1,
+        EUR: 0.85,
+        TRY: 31.50,
+        GBP: 0.73,
+    };
 
-  async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
-    const fromRate = this.exchangeRates[fromCurrency.toUpperCase()];
-    const toRate = this.exchangeRates[toCurrency.toUpperCase()];
-
-    if (!fromRate || !toRate) {
-      throw new Error('Desteklenmeyen para birimi');
+    public constructor(databaseService: DatabaseService) {
+        this.databaseService = databaseService;
     }
 
-    return toRate / fromRate;
-  }
+    public async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
+        const fromRate = this.exchangeRates[fromCurrency.toUpperCase()];
+        const toRate = this.exchangeRates[toCurrency.toUpperCase()];
 
-  async convertAmount(
-    amount: number,
-    fromCurrency: string,
-    toCurrency: string,
-  ): Promise<number> {
-    const rate = await this.getExchangeRate(fromCurrency, toCurrency);
-    return amount * rate;
-  }
+        if (!fromRate || !toRate) {
+            throw new Error('Desteklenmeyen para birimi');
+        }
 
-  getSupportedCurrencies(): string[] {
-    return Object.keys(this.exchangeRates);
-  }
+        return toRate / fromRate;
+    }
+
+    public async convertAmount(
+        amount: number,
+        fromCurrency: string,
+        toCurrency: string,
+    ): Promise<number> {
+        const rate = await this.getExchangeRate(fromCurrency, toCurrency);
+        return amount * rate;
+    }
+
+    public getSupportedCurrencies(): string[] {
+        return Object.keys(this.exchangeRates);
+    }
 } 

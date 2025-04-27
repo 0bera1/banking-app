@@ -1,17 +1,29 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { UsersService } from '../users/users.service';
+import { UnauthorizedException } from '@nestjs/common';
+import { UsersService, IUsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
-@Injectable()
-export class AuthService {
-    constructor(
-        private readonly usersService: UsersService,
-        private readonly jwtService: JwtService,
-    ) {}
+export interface IAuthService {
+    register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<any>;
+    validateUser(email: string, password: string): Promise<any>;
+    login(user: any): Promise<{ access_token: string; user: any }>;
+    verifyToken(token: string): Promise<any>;
+    hashPassword(password: string): Promise<string>;
+}
 
-    // Kullanıcı kaydı
-    async register(username: string, email: string, password: string, first_name: string, last_name: string) {
+export class AuthService implements IAuthService {
+    private readonly usersService: IUsersService;
+    private readonly jwtService: JwtService;
+
+    public constructor(
+        usersService: IUsersService,
+        jwtService: JwtService,
+    ) {
+        this.usersService = usersService;
+        this.jwtService = jwtService;
+    }
+
+    public async register(username: string, email: string, password: string, first_name: string, last_name: string) {
         try {
             console.log('Registering user:', { username, email, first_name, last_name });
             const hashedPassword = await this.hashPassword(password);
@@ -33,8 +45,7 @@ export class AuthService {
         }
     }
 
-    // Kullanıcı doğrulama
-    async validateUser(email: string, password: string): Promise<any> {
+    public async validateUser(email: string, password: string): Promise<any> {
         const user = await this.usersService.findByEmail(email);
         
         if (user && await bcrypt.compare(password, user.password_hash)) {
@@ -45,8 +56,7 @@ export class AuthService {
         return null;
     }
 
-    // Giriş işlemi
-    async login(user: any) {
+    public async login(user: any) {
         const payload = { 
             email: user.email, 
             sub: user.id,
@@ -63,8 +73,7 @@ export class AuthService {
         };
     }
 
-    // Token doğrulama
-    async verifyToken(token: string) {
+    public async verifyToken(token: string) {
         try {
             return this.jwtService.verify(token);
         } catch (error) {
@@ -72,8 +81,7 @@ export class AuthService {
         }
     }
 
-    // Şifre hashleme
-    async hashPassword(password: string): Promise<string> {
+    public async hashPassword(password: string): Promise<string> {
         const salt = await bcrypt.genSalt(10);
         return bcrypt.hash(password, salt);
     }

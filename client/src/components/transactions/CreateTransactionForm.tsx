@@ -80,13 +80,14 @@ export const CreateTransactionForm = ({ onClose, onSuccess }: CreateTransactionF
 
   const mutation = useMutation({
     mutationFn: async (data: {
-      senderAccountId: number;
-      receiverIban: string;
+      from_account_id: number;
+      receiver_iban: string;
       amount: number;
+      currency: Currency;
       description?: string;
     }) => {
       const token = localStorage.getItem('token');
-      const senderAccount = accounts?.find((acc: Account) => acc.id === data.senderAccountId);
+      const senderAccount = accounts?.find((acc: Account) => acc.id === data.from_account_id);
       
       if (!senderAccount) {
         throw new Error('Gönderen hesap bulunamadı');
@@ -98,7 +99,7 @@ export const CreateTransactionForm = ({ onClose, onSuccess }: CreateTransactionF
       }
 
       // Alıcı IBAN kontrolü
-      const verifyResponse = await fetch(`http://localhost:3000/accounts/verify-iban/${data.receiverIban}`, {
+      const verifyResponse = await fetch(`http://localhost:3000/accounts/verify-iban/${data.receiver_iban}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -115,10 +116,10 @@ export const CreateTransactionForm = ({ onClose, onSuccess }: CreateTransactionF
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          sender_id: data.senderAccountId,
-          receiver_iban: data.receiverIban,
+          from_account_id: data.from_account_id,
+          receiver_iban: data.receiver_iban,
           amount: data.amount,
-          currency: senderAccount.currency,
+          currency: data.currency,
           description: data.description
         }),
       });
@@ -163,9 +164,10 @@ export const CreateTransactionForm = ({ onClose, onSuccess }: CreateTransactionF
     }
 
     mutation.mutate({
-      senderAccountId: parseInt(formData.senderAccountId),
-      receiverIban: formData.receiverIban,
+      from_account_id: parseInt(formData.senderAccountId),
+      receiver_iban: formData.receiverIban,
       amount: amount,
+      currency: senderAccount.currency,
       description: formData.description || undefined,
     });
   };

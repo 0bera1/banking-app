@@ -1,8 +1,6 @@
-import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { ExchangeService } from '../exchange/exchange.service';
 
-@Injectable()
 export class TransactionLimitsService {
   constructor(
     private readonly databaseService: DatabaseService,

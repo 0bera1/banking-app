@@ -1,20 +1,34 @@
-import { Controller, Get, UseGuards, Request, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AuditService } from './audit.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('audit')
 @UseGuards(JwtAuthGuard)
 export class AuditController {
-    constructor(private readonly auditService: AuditService) {}
+    private readonly auditService: AuditService;
 
-    @Get()
-    async getLogs(@Request() req) {
-        try {
-            // Tüm logları getir, user_id'ye göre filtreleme yapmadan
-            return await this.auditService.getLogs();
-        } catch (error) {
-            console.error('Error in getLogs:', error);
-            throw new HttpException(`Error getting logs: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public constructor(auditService: AuditService) {
+        this.auditService = auditService;
+    }
+
+    @Get('logs')
+    public getLogs(
+        @Query('tableName') tableName?: string,
+        @Query('recordId') recordId?: string,
+        @Query('action') action?: string,
+        @Query('startDate') startDate?: Date,
+        @Query('endDate') endDate?: Date,
+        @Query('limit') limit?: number,
+        @Query('offset') offset?: number,
+    ) {
+        return this.auditService.getLogs(
+            tableName,
+            recordId,
+            action,
+            startDate,
+            endDate,
+            limit,
+            offset
+        );
     }
 } 

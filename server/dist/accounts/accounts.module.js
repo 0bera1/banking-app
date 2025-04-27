@@ -10,17 +10,25 @@ exports.AccountsModule = void 0;
 const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("./accounts.service");
 const accounts_controller_1 = require("./accounts.controller");
-const database_module_1 = require("../database/database.module");
-const users_module_1 = require("../users/users.module");
-const exchange_module_1 = require("../exchange/exchange.module");
+const database_service_1 = require("../database/database.service");
+const users_service_1 = require("../users/users.service");
+const exchange_service_1 = require("../exchange/exchange.service");
+const accountsServiceInstance = new accounts_service_1.AccountsService(new database_service_1.DatabaseService(), new users_service_1.UsersService(new database_service_1.DatabaseService()), new exchange_service_1.ExchangeService(new database_service_1.DatabaseService()));
 let AccountsModule = class AccountsModule {
 };
 exports.AccountsModule = AccountsModule;
 exports.AccountsModule = AccountsModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule, users_module_1.UsersModule, exchange_module_1.ExchangeModule],
         controllers: [accounts_controller_1.AccountsController],
-        providers: [accounts_service_1.AccountsService],
+        providers: [
+            {
+                provide: accounts_service_1.AccountsService,
+                useValue: accountsServiceInstance,
+            },
+            database_service_1.DatabaseService,
+            users_service_1.UsersService,
+            exchange_service_1.ExchangeService,
+        ],
         exports: [accounts_service_1.AccountsService],
     })
 ], AccountsModule);

@@ -1,37 +1,35 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ExchangeService } from './exchange.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('exchange')
+@UseGuards(JwtAuthGuard)
 export class ExchangeController {
-    constructor(private readonly exchangeService: ExchangeService) {}
+    private readonly exchangeService: ExchangeService;
+
+    public constructor(exchangeService: ExchangeService) {
+        this.exchangeService = exchangeService;
+    }
 
     @Get('rate')
-    async getExchangeRate(
+    public getExchangeRate(
         @Query('from') fromCurrency: string,
-        @Query('to') toCurrency: string,
+        @Query('to') toCurrency: string
     ) {
-        const rate = await this.exchangeService.getExchangeRate(fromCurrency, toCurrency);
-        return { rate };
+        return this.exchangeService.getExchangeRate(fromCurrency, toCurrency);
     }
 
     @Get('convert')
-    async convertAmount(
+    public convertAmount(
         @Query('amount') amount: number,
         @Query('from') fromCurrency: string,
-        @Query('to') toCurrency: string,
+        @Query('to') toCurrency: string
     ) {
-        const convertedAmount = await this.exchangeService.convertAmount(
-            amount,
-            fromCurrency,
-            toCurrency,
-        );
-        return { amount: convertedAmount };
+        return this.exchangeService.convertAmount(amount, fromCurrency, toCurrency);
     }
 
     @Get('currencies')
-    getSupportedCurrencies() {
-        return {
-            currencies: this.exchangeService.getSupportedCurrencies(),
-        };
+    public getSupportedCurrencies() {
+        return this.exchangeService.getSupportedCurrencies();
     }
 } 

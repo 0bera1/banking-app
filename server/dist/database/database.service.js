@@ -14,6 +14,12 @@ const common_1 = require("@nestjs/common");
 const pg_1 = require("pg");
 let DatabaseService = class DatabaseService {
     constructor() {
+        console.log('Initializing database connection with config:', {
+            user: process.env.DB_USER || 'postgres',
+            host: process.env.DB_HOST || 'localhost',
+            database: process.env.DB_NAME || 'banking_app',
+            port: parseInt(process.env.DB_PORT || '5432')
+        });
         this.pool = new pg_1.Pool({
             user: process.env.DB_USER || 'postgres',
             host: process.env.DB_HOST || 'localhost',
@@ -21,19 +27,43 @@ let DatabaseService = class DatabaseService {
             password: process.env.DB_PASSWORD || 'postgres',
             port: parseInt(process.env.DB_PORT || '5432'),
         });
+        this.pool.on('error', (err) => {
+            console.error('Unexpected error on idle client', err);
+        });
+        this.pool.on('connect', () => {
+            console.log('New client connected to database');
+        });
     }
     async query(text, params) {
         const start = Date.now();
         try {
             console.log('Executing query:', text);
             console.log('With params:', params);
+            if (!this.pool) {
+                console.error('Database pool is not initialized');
+                throw new Error('Veritabanı bağlantısı başlatılmadı');
+            }
             const res = await this.pool.query(text, params);
             const duration = Date.now() - start;
-            console.log('Query executed successfully', { text, duration, rows: res.rowCount });
+            console.log('Query executed successfully', {
+                text,
+                params,
+                duration,
+                rowCount: res.rowCount,
+                rows: res.rows
+            });
             return res;
         }
         catch (error) {
-            console.error('Error executing query:', error);
+            console.error('Error executing query:', {
+                text,
+                params,
+                error: {
+                    message: error.message,
+                    code: error.code,
+                    stack: error.stack
+                }
+            });
             throw error;
         }
     }

@@ -1,17 +1,39 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { Account } from './entities/account.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { UsersService } from '../users/users.service';
-import { ExchangeService } from '../exchange/exchange.service';
+import { UsersService, IUsersService } from '../users/users.service';
+import { ExchangeService, IExchangeService } from '../exchange/exchange.service';
 
-@Injectable()
-export class AccountsService {
-    constructor(
-        private readonly databaseService: DatabaseService,
-        private readonly usersService: UsersService,
-        private readonly exchangeService: ExchangeService
-    ) {}
+export interface IAccountsService {
+    create(createAccountDto: CreateAccountDto & { user_id: number }): Promise<Account>;
+    remove(id: number, user_id: number): Promise<void>;
+    findOne(id: number): Promise<Account>;
+    findByUserId(user_id: number): Promise<Account[]>;
+    findByCardNumber(cardNumber: string): Promise<Account>;
+    updateBalance(id: number, amount: number, user_id: number): Promise<Account>;
+    updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<Account>;
+    findAll(): Promise<Account[]>;
+    deposit(id: number, amount: number, user_id: number): Promise<Account>;
+    withdraw(id: number, amount: number, user_id: number): Promise<Account>;
+    getBalance(id: number, currency?: string): Promise<{ balance: number; currency: string; }>;
+    findByIban(iban: string): Promise<Account>;
+}
+
+export class AccountsService implements IAccountsService {
+    private readonly databaseService: DatabaseService;
+    private readonly usersService: IUsersService;
+    private readonly exchangeService: IExchangeService;
+
+    public constructor(
+        databaseService: DatabaseService,
+        usersService: IUsersService,
+        exchangeService: IExchangeService
+    ) {
+        this.databaseService = databaseService;
+        this.usersService = usersService;
+        this.exchangeService = exchangeService;
+    }
 
     private generateIban(): string {
         // TR + 24 haneli rastgele sayı
@@ -162,9 +184,28 @@ export class AccountsService {
 
     // Kullanıcının hesaplarını listeleme
     async findByUserId(user_id: number): Promise<Account[]> {
-        const query = 'SELECT * FROM accounts WHERE user_id = $1';
-        const result = await this.databaseService.query(query, [user_id]);
-        return result.rows;
+        try {
+            console.log('Finding accounts for user:', user_id);
+            const query = 'SELECT * FROM accounts WHERE user_id = $1';
+            console.log('Executing query:', query);
+            console.log('With params:', [user_id]);
+            const result = await this.databaseService.query(query, [user_id]);
+            console.log('Query result:', result);
+            if (!result || !result.rows) {
+                console.error('No result or rows from query');
+                return [];
+            }
+            console.log('Found accounts:', result.rows);
+            return result.rows;
+        } catch (error) {
+            console.error('Error in findByUserId:', error);
+            console.error('Error details:', {
+                message: error.message,
+                code: error.code,
+                stack: error.stack
+            });
+            throw new Error(`Hesaplar getirilirken bir hata oluştu: ${error.message}`);
+        }
     }
 
     // Kart numarasına göre hesap bulma

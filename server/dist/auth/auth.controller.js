@@ -15,51 +15,60 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
 const auth_service_1 = require("./auth.service");
-const users_service_1 = require("../users/users.service");
+const jwt_auth_guard_1 = require("./guards/jwt-auth.guard");
 let AuthController = class AuthController {
-    constructor(authService, usersService) {
+    constructor(authService) {
         this.authService = authService;
-        this.usersService = usersService;
     }
-    async login(loginDto) {
-        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+    async register(username, email, password, first_name, last_name) {
+        try {
+            return await this.authService.register(username, email, password, first_name, last_name);
+        }
+        catch (error) {
+            throw new common_1.UnauthorizedException(error.message);
+        }
+    }
+    async login(email, password) {
+        const user = await this.authService.validateUser(email, password);
         if (!user) {
-            throw new common_1.UnauthorizedException('Invalid credentials');
+            throw new common_1.UnauthorizedException('Kullanıcı bulunamadı veya şifre hatalı.');
         }
         return this.authService.login(user);
     }
-    async register(userData) {
-        try {
-            const user = await this.authService.register(userData.username, userData.email, userData.password, userData.first_name, userData.last_name);
-            return this.authService.login(user);
-        }
-        catch (error) {
-            console.error('Registration error:', error);
-            if (error instanceof common_1.HttpException) {
-                throw error;
-            }
-            throw new common_1.HttpException(`Error registering: ${error.message}`, common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    getProfile(req) {
+        return req.user;
     }
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, common_1.Post)('login'),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.Post)('register'),
+    __param(0, (0, common_1.Body)('username')),
+    __param(1, (0, common_1.Body)('email')),
+    __param(2, (0, common_1.Body)('password')),
+    __param(3, (0, common_1.Body)('first_name')),
+    __param(4, (0, common_1.Body)('last_name')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [String, String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "register", null);
+__decorate([
+    (0, common_1.Post)('login'),
+    __param(0, (0, common_1.Body)('email')),
+    __param(1, (0, common_1.Body)('password')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
-    (0, common_1.Post)('register'),
-    __param(0, (0, common_1.Body)()),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Get)('profile'),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "register", null);
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "getProfile", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService,
-        users_service_1.UsersService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

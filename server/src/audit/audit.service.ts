@@ -8,11 +8,37 @@ interface LogActionParams {
   details: Record<string, any>;
 }
 
-@Injectable()
-export class AuditService {
-  constructor(private readonly databaseService: DatabaseService) {}
+export interface IAuditService {
+  logAction(params: LogActionParams): Promise<void>;
+  log(
+    action: string,
+    tableName: string,
+    recordId: string,
+    oldData?: Record<string, any>,
+    newData?: Record<string, any>,
+    userId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<void>;
+  getLogs(
+    tableName?: string,
+    recordId?: string,
+    action?: string,
+    startDate?: Date,
+    endDate?: Date,
+    limit?: number,
+    offset?: number,
+  ): Promise<{ logs: AuditLog[]; total: number }>;
+}
 
-  async logAction({ userId, action, details }: LogActionParams): Promise<void> {
+export class AuditService implements IAuditService {
+  private readonly databaseService: DatabaseService;
+
+  public constructor(databaseService: DatabaseService) {
+    this.databaseService = databaseService;
+  }
+
+  public async logAction({ userId, action, details }: LogActionParams): Promise<void> {
     const query = `
       INSERT INTO audit_logs 
       (user_id, action, table_name, record_id, new_data)
@@ -29,7 +55,7 @@ export class AuditService {
   }
 
   // log() metodu, bir işlem gerçekleştiğinde bu işlemi audit_logs tablosuna kaydeder.
-  async log(
+  public async log(
     action: string, // işlem tipi (CREATE, UPDATE, DELETE)
     tableName: string, // işlem yapılan tablo adı
     recordId: string, // işlem yapılan kaydın ID'si
@@ -60,7 +86,7 @@ export class AuditService {
   }
 
   // getLogs() metodu, audit_logs tablosundan işlem geçmişlerini getirir.
-  async getLogs(
+  public async getLogs(
     tableName?: string,
     recordId?: string,
     action?: string,

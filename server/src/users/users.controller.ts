@@ -5,29 +5,33 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-    constructor(private readonly usersService: UsersService) {}
+    private readonly usersService: UsersService;
+
+    public constructor(usersService: UsersService) {
+        this.usersService = usersService;
+    }
 
     // Yeni kullanıcı oluşturma
     @Post()
-    create(@Body() createUserDto: any) {
+    public create(@Body() createUserDto: any) {
         return this.usersService.create(createUserDto);
     }
 
     // Kullanıcı detayı görüntüleme
     @Get(':id')
-    findOne(@Param('id') id: string) {
+    public findOne(@Param('id') id: string) {
         return this.usersService.findOne(+id);
     }
 
     // Kullanıcı güncelleme
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateUserDto: any) {
+    public update(@Param('id') id: string, @Body() updateUserDto: any) {
         return this.usersService.update(+id, updateUserDto);
     }
 
     // Kullanıcı silme
     @Delete(':id')
-    remove(@Param('id') id: string) {
+    public remove(@Param('id') id: string) {
         return this.usersService.remove(+id);
     }
 } 

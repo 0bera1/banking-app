@@ -1,49 +1,45 @@
-import { Controller, Post, Body, HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, Get, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
-
-interface User {
-  id: number;
-  email: string;
-  password_hash: string;
-}
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-    constructor(
-        private readonly authService: AuthService,
-        private readonly usersService: UsersService,
-    ) {}
+    private readonly authService: AuthService;
 
-    // Giriş işlemi
+    public constructor(authService: AuthService) {
+        this.authService = authService;
+    }
+
+    @Post('register')
+    public async register(
+        @Body('username') username: string,
+        @Body('email') email: string,
+        @Body('password') password: string,
+        @Body('first_name') first_name: string,
+        @Body('last_name') last_name: string
+    ) {
+        try {
+            return await this.authService.register(username, email, password, first_name, last_name);
+        } catch (error) {
+            throw new UnauthorizedException(error.message);
+        }
+    }
+
     @Post('login')
-    async login(@Body() loginDto: { email: string; password: string }) {
-        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+    public async login(
+        @Body('email') email: string,
+        @Body('password') password: string
+    ) {
+        const user = await this.authService.validateUser(email, password);
         if (!user) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new UnauthorizedException('Kullanıcı bulunamadı veya şifre hatalı.');
         }
         return this.authService.login(user);
     }
 
-    // Kayıt işlemi
-    @Post('register')
-    async register(@Body() userData: { username: string; email: string; password: string; first_name: string; last_name: string }) {
-        try {
-            const user = await this.authService.register(
-                userData.username,
-                userData.email,
-                userData.password,
-                userData.first_name,
-                userData.last_name
-            );
-            
-            return this.authService.login(user);
-        } catch (error) {
-            console.error('Registration error:', error);
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new HttpException(`Error registering: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    @UseGuards(JwtAuthGuard)
+    @Get('profile')
+    public getProfile(@Req() req) {
+        return req.user;
     }
 } 

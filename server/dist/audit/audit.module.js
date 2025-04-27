@@ -10,14 +10,20 @@ exports.AuditModule = void 0;
 const common_1 = require("@nestjs/common");
 const audit_service_1 = require("./audit.service");
 const audit_controller_1 = require("./audit.controller");
-const database_module_1 = require("../database/database.module");
+const database_service_1 = require("../database/database.service");
+const auditServiceInstance = new audit_service_1.AuditService(new database_service_1.DatabaseService());
 let AuditModule = class AuditModule {
 };
 exports.AuditModule = AuditModule;
 exports.AuditModule = AuditModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule],
-        providers: [audit_service_1.AuditService],
+        providers: [
+            {
+                provide: audit_service_1.AuditService,
+                useValue: auditServiceInstance,
+            },
+            database_service_1.DatabaseService,
+        ],
         controllers: [audit_controller_1.AuditController],
         exports: [audit_service_1.AuditService],
     })
