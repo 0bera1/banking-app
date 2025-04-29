@@ -6,13 +6,12 @@ import {IAuditService} from '../audit/audit.service';
 import {TransactionLimitsService} from './transaction-limits.service';
 
 export interface ITransactionsService {
-    createTransaction(
-        userId: number,
-        fromAccountId: number,
-        receiverIban: string,
-        amount: number,
-        currency: string,
-        description?: string,
+    createTransaction(userId: number,
+                      fromAccountId: number,
+                      receiverIban: string,
+                      amount: number,
+                      currency: string,
+                      description?: string,
     ): Promise<any>;
 
     getTransactions(getTransactionsDto: GetTransactionsDto): Promise<any[]>;
@@ -26,11 +25,10 @@ export class TransactionsService implements ITransactionsService {
     private readonly auditService: IAuditService;
     private readonly transactionLimitsService: TransactionLimitsService;
 
-    public constructor(
-        databaseService: DatabaseService,
-        exchangeService: IExchangeService,
-        auditService: IAuditService,
-        transactionLimitsService: TransactionLimitsService,
+    public constructor(databaseService: DatabaseService,
+                       exchangeService: IExchangeService,
+                       auditService: IAuditService,
+                       transactionLimitsService: TransactionLimitsService,
     ) {
         this.databaseService = databaseService;
         this.exchangeService = exchangeService;
@@ -38,13 +36,12 @@ export class TransactionsService implements ITransactionsService {
         this.transactionLimitsService = transactionLimitsService;
     }
 
-    public async createTransaction(
-        userId: number,
-        fromAccountId: number,
-        receiverIban: string,
-        amount: number,
-        currency: string,
-        description?: string,
+    public async createTransaction(userId: number,
+                                   fromAccountId: number,
+                                   receiverIban: string,
+                                   amount: number,
+                                   currency: string,
+                                   description?: string,
     ) {
         const client = await this.databaseService.getClient();
         try {

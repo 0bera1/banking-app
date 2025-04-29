@@ -1,10 +1,11 @@
 import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, UseGuards, Request, Put, Query, NotFoundException, BadRequestException, Req } from '@nestjs/common';
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { Account } from './entities/account.entity';
+import { Account } from './interface/account.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersService } from '../users/users.service';
 import { DatabaseService } from '../database/database.service';
+import {UserResponseDto} from "../users/dto/user-response.dto";
 
 @Controller('accounts')
 @UseGuards(JwtAuthGuard)
@@ -102,7 +103,7 @@ export class AccountsController {
     // Kart numarasına göre hesap bulma endpoint'i
     @Get('card/:cardNumber')
     async findByCardNumber(@Request() req, @Param('cardNumber') cardNumber: string): Promise<Account> {
-        const account = await this.accountsService.findByCardNumber(cardNumber);
+        const account:Account = await this.accountsService.findByCardNumber(cardNumber);
         if (!account) {
             throw new HttpException('Hesap bulunamadı', HttpStatus.NOT_FOUND);
         }
@@ -124,7 +125,7 @@ export class AccountsController {
 
     @Get('verify-iban/:iban')
     async verifyIban(@Param('iban') iban: string) {
-        const account = await this.accountsService.findByIban(iban);
+        const account:Account = await this.accountsService.findByIban(iban);
         if (!account) {
             throw new NotFoundException('Hesap bulunamadı');
         }
@@ -133,7 +134,7 @@ export class AccountsController {
             throw new BadRequestException('Bu IBAN\'a ait hesap aktif değil');
         }
 
-        const user = await this.usersService.findOne(account.user_id);
+        const user:UserResponseDto = await this.usersService.findOne(account.user_id);
         if (!user) {
             throw new NotFoundException('Kullanıcı bulunamadı');
         }

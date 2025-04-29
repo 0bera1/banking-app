@@ -1,10 +1,11 @@
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { Account } from './entities/account.entity';
+import { Account } from './interface/account.interface';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { UsersService } from '../users/users.service';
 import { IUsersService } from '../users/interface/IUsersService';
 import { ExchangeService, IExchangeService } from '../exchange/exchange.service';
+import {UserResponseDto} from "../users/dto/user-response.dto";
 
 export interface IAccountsService {
     create(createAccountDto: CreateAccountDto & { user_id: number }): Promise<Account>;
@@ -38,7 +39,7 @@ export class AccountsService implements IAccountsService {
 
     private generateIban(): string {
         // TR + 24 haneli rastgele sayı
-        const randomNumber = Math.floor(Math.random() * 1000000000000000000000000).toString().padStart(24, '0');
+        const randomNumber:string = Math.floor(Math.random() * 1000000000000000000000000).toString().padStart(24, '0');
         return `TR${randomNumber}`;
     }
 
@@ -50,7 +51,7 @@ export class AccountsService implements IAccountsService {
 
     private async generateUniqueIban(): Promise<string> {
         let iban: string;
-        let isUnique = false;
+        let isUnique:boolean = false;
 
         while (!isUnique) {
             iban = this.generateIban();
@@ -73,10 +74,10 @@ export class AccountsService implements IAccountsService {
         }
 
         // Luhn algoritması ile kontrol hanesi ekle
-        let sum = 0;
-        let isEven = false;
-        for (let i = cardNumber.length - 1; i >= 0; i--) {
-            let digit = parseInt(cardNumber[i]);
+        let sum : number = 0;
+        let isEven:boolean = false;
+        for (let i:number = cardNumber.length - 1; i >= 0; i--) {
+            let digit :number = parseInt(cardNumber[i]);
             if (isEven) {
                 digit *= 2;
                 if (digit > 9) {
@@ -86,7 +87,7 @@ export class AccountsService implements IAccountsService {
             sum += digit;
             isEven = !isEven;
         }
-        const checkDigit = (10 - (sum % 10)) % 10;
+        const checkDigit : number = (10 - (sum % 10)) % 10;
         return cardNumber + checkDigit;
     }
 
@@ -101,14 +102,14 @@ export class AccountsService implements IAccountsService {
             }
 
             // Kullanıcıyı kontrol et
-            const user = await this.usersService.findOne(createAccountDto.user_id);
+            const user :UserResponseDto = await this.usersService.findOne(createAccountDto.user_id);
             if (!user) {
                 console.error('User not found:', createAccountDto.user_id);
                 throw new NotFoundException('Kullanıcı bulunamadı');
             }
 
             // Benzersiz IBAN oluştur
-            const iban = await this.generateUniqueIban();
+            const iban :string = await this.generateUniqueIban();
             console.log('Generated IBAN:', iban);
 
             const query = `
@@ -118,7 +119,7 @@ export class AccountsService implements IAccountsService {
                 RETURNING *
             `;
             
-            const values = [
+            const values :(string|number)[] = [
                 this.generateCardNumber(),
                 createAccountDto.cardHolderName,
                 createAccountDto.cardBrand,

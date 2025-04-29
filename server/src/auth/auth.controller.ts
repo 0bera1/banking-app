@@ -1,6 +1,6 @@
-import { Controller, Post, Body, UnauthorizedException, Get, UseGuards, Req } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import {Controller, Post, Body, UnauthorizedException, Get, UseGuards, Req} from '@nestjs/common';
+import {AuthService} from './auth.service';
+import {JwtAuthGuard} from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -11,12 +11,11 @@ export class AuthController {
     }
 
     @Post('register')
-    public async register(
-        @Body('username') username: string,
-        @Body('email') email: string,
-        @Body('password') password: string,
-        @Body('first_name') first_name: string,
-        @Body('last_name') last_name: string
+    public async register(@Body('username') username: string,
+                          @Body('email') email: string,
+                          @Body('password') password: string,
+                          @Body('first_name') first_name: string,
+                          @Body('last_name') last_name: string
     ) {
         try {
             return await this.authService.register(username, email, password, first_name, last_name);

@@ -7,13 +7,7 @@ const exchangeServiceInstance = new ExchangeService(new DatabaseService());
 
 @Module({
   controllers: [ExchangeController],
-  providers: [
-    {
-      provide: ExchangeService,
-      useValue: exchangeServiceInstance,
-    },
-    DatabaseService,
-  ],
+  providers: [{provide: ExchangeService,useValue: exchangeServiceInstance,},DatabaseService,],
   exports: [ExchangeService],
 })
 export class ExchangeModule {} 

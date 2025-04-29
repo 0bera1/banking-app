@@ -1,8 +1,10 @@
-import { DatabaseService } from '../database/database.service';
+import {DatabaseService} from '../database/database.service';
 
 export interface IExchangeService {
     getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number>;
+
     convertAmount(amount: number, fromCurrency: string, toCurrency: string): Promise<number>;
+
     getSupportedCurrencies(): string[];
 }
 
@@ -30,12 +32,11 @@ export class ExchangeService implements IExchangeService {
         return toRate / fromRate;
     }
 
-    public async convertAmount(
-        amount: number,
-        fromCurrency: string,
-        toCurrency: string,
+    public async convertAmount(amount: number,
+                               fromCurrency: string,
+                               toCurrency: string,
     ): Promise<number> {
-        const rate = await this.getExchangeRate(fromCurrency, toCurrency);
+        const rate:number = await this.getExchangeRate(fromCurrency, toCurrency);
         return amount * rate;
     }
 

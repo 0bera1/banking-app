@@ -1,13 +1,18 @@
-import { UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import {UnauthorizedException} from '@nestjs/common';
+import {JwtService} from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import {IUsersService} from "../users/interface/IUsersService";
+import {UserResponseDto} from "../users/dto/user-response.dto";
 
 export interface IAuthService {
     register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<any>;
+
     validateUser(email: string, password: string): Promise<any>;
+
     login(user: any): Promise<{ access_token: string; user: any }>;
+
     verifyToken(token: string): Promise<any>;
+
     hashPassword(password: string): Promise<string>;
 }
 
@@ -25,10 +30,10 @@ export class AuthService implements IAuthService {
 
     public async register(username: string, email: string, password: string, first_name: string, last_name: string) {
         try {
-            console.log('Registering user:', { username, email, first_name, last_name });
-            const hashedPassword = await this.hashPassword(password);
+            console.log('Registering user:', {username, email, first_name, last_name});
+            const hashedPassword: string = await this.hashPassword(password);
             console.log('Password hashed successfully');
-            const user = await this.usersService.create({
+            const user: UserResponseDto = await this.usersService.create({
                 username,
                 email,
                 password_hash: hashedPassword,
@@ -36,8 +41,8 @@ export class AuthService implements IAuthService {
                 last_name
             });
             console.log('User created successfully:', user);
-            
-            const { password_hash, ...result } = user;
+
+            const {password_hash, ...result} = user;
             return result;
         } catch (error) {
             console.error('Error in register:', error);
@@ -46,23 +51,23 @@ export class AuthService implements IAuthService {
     }
 
     public async validateUser(email: string, password: string): Promise<any> {
-        const user = await this.usersService.findByEmail(email);
-        
+        const user:UserResponseDto = await this.usersService.findByEmail(email);
+
         if (user && await bcrypt.compare(password, user.password_hash)) {
-            const { password_hash, ...result } = user;
+            const {password_hash, ...result} = user;
             return result;
         }
-        
+
         return null;
     }
 
     public async login(user: any) {
-        const payload = { 
-            email: user.email, 
+        const payload = {
+            email: user.email,
             sub: user.id,
-            role: user.role 
+            role: user.role
         };
-        
+
         return {
             access_token: this.jwtService.sign(payload),
             user: {
