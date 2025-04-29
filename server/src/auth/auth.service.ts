@@ -1,7 +1,7 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { UsersService, IUsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import {IUsersService} from "../users/interface/IUsersService";
 
 export interface IAuthService {
     register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<any>;

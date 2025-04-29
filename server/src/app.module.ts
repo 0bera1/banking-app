@@ -12,18 +12,15 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    DatabaseModule,
-    UsersModule,
-    AuthModule,
-    AccountsModule,
-    TransactionsModule,
-    AuditModule,
-    ExchangeModule,
-    TransactionLimitsModule
+  imports: [ConfigModule.forRoot({isGlobal: true,}),
+        DatabaseModule,
+        UsersModule,
+        AuthModule,
+        AccountsModule,
+        TransactionsModule,
+        AuditModule,
+        ExchangeModule,
+        TransactionLimitsModule
   ],
   controllers: [AppController],
   providers: [AppService],

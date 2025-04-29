@@ -3,7 +3,6 @@ import { Pool, PoolClient } from 'pg';
 
 @Injectable()
 export class DatabaseService {
-  // PostgreSQL bağlantı havuzu
   // Pool, veritabanı bağlantılarını yönetmek için kullanılır
   private pool: Pool;
 
@@ -23,20 +22,18 @@ export class DatabaseService {
         port: parseInt(process.env.DB_PORT || '5432'),
     });
 
-    this.pool.on('error', (err) => {
+    this.pool.on('error', (err):void => {
         console.error('Unexpected error on idle client', err);
     });
 
-    this.pool.on('connect', () => {
+    this.pool.on('connect', ():void => {
         console.log('New client connected to database');
     });
   }
 
-  // Veritabanı sorgularını çalıştırmak için genel bir metot
-  // text: SQL sorgusu
   // params: Sorgu parametreleri (SQL injection'ı önlemek için)
   async query(text: string, params?: any): Promise<any> {
-    const start = Date.now();
+    const start:number = Date.now();
     try {
         console.log('Executing query:', text);
         console.log('With params:', params);
@@ -47,7 +44,7 @@ export class DatabaseService {
         }
         
         const res = await this.pool.query(text, params);
-        const duration = Date.now() - start;
+        const duration:number = Date.now() - start;
         console.log('Query executed successfully', {
             text,
             params,
@@ -98,9 +95,9 @@ export class DatabaseService {
   }
 
   async create(table: string, data: Record<string, any>): Promise<any> {
-    const columns = Object.keys(data).join(', ');
+    const columns : string = Object.keys(data).join(', ');
     const values = Object.values(data);
-    const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+    const placeholders :string = values.map((_, index:number):string => `$${index + 1}`).join(', ');
     
     const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`;
     const result = await this.query(query, values);
@@ -108,8 +105,8 @@ export class DatabaseService {
   }
 
   async update(table: string, id: number, data: Record<string, any>): Promise<any> {
-    const setClause = Object.keys(data)
-      .map((key, index) => `${key} = $${index + 1}`)
+    const setClause : string = Object.keys(data)
+      .map((key:string, index:number):string => `${key} = $${index + 1}`)
       .join(', ');
     
     const values = [...Object.values(data), id];

@@ -21,8 +21,8 @@ export declare class AccountsController {
     }>;
     verifyIban(iban: string): Promise<{
         iban: string;
-        first_name: any;
-        last_name: any;
+        first_name: string;
+        last_name: string;
         status: string;
     }>;
     updateStatus(req: any, id: string, status: 'active' | 'inactive' | 'blocked'): Promise<Account>;

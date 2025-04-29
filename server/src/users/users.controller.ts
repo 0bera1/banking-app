@@ -1,6 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import {UpdateUserDto} from "./dto/update-user.dto";
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -11,27 +14,23 @@ export class UsersController {
         this.usersService = usersService;
     }
 
-    // Yeni kullanıcı oluşturma
     @Post()
-    public create(@Body() createUserDto: any) {
-        return this.usersService.create(createUserDto);
+    public async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
+        return await this.usersService.create(createUserDto);
     }
 
-    // Kullanıcı detayı görüntüleme
     @Get(':id')
-    public findOne(@Param('id') id: string) {
-        return this.usersService.findOne(+id);
+    public async findOne(@Param('id') id: string): Promise<UserResponseDto> {
+        return await this.usersService.findOne(+id);
     }
 
-    // Kullanıcı güncelleme
     @Patch(':id')
-    public update(@Param('id') id: string, @Body() updateUserDto: any) {
-        return this.usersService.update(+id, updateUserDto);
+    public async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto): Promise<UserResponseDto> {
+        return await this.usersService.update(+id, updateUserDto);
     }
 
-    // Kullanıcı silme
     @Delete(':id')
-    public remove(@Param('id') id: string) {
-        return this.usersService.remove(+id);
+    public async remove(@Param('id') id: string): Promise<void> {
+        await this.usersService.remove(+id);
     }
 } 

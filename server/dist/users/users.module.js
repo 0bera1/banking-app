@@ -19,10 +19,7 @@ exports.UsersModule = UsersModule = __decorate([
     (0, common_1.Module)({
         controllers: [users_controller_1.UsersController],
         providers: [
-            {
-                provide: users_service_1.UsersService,
-                useValue: usersServiceInstance,
-            },
+            { provide: users_service_1.UsersService, useValue: usersServiceInstance },
             database_service_1.DatabaseService,
         ],
         exports: [users_service_1.UsersService],

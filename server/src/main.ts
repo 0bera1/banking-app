@@ -2,11 +2,12 @@
 import { NestFactory } from '@nestjs/core';
 // Ana uygulama modülünü import ediyoruz
 import { AppModule } from './app.module';
+import {INestApplication} from "@nestjs/common";
 
 // Uygulamayı başlatan asenkron fonksiyon
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   // NestJS uygulamasını oluşturuyoruz
-  const app = await NestFactory.create(AppModule);
+  const app:INestApplication<any> = await NestFactory.create(AppModule);
   // CORS'u etkinleştiriyoruz (farklı domainlerden gelen isteklere izin veriyoruz)
   app.enableCors();
   // Uygulamayı 3000 portunda dinlemeye başlıyoruz

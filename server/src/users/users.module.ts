@@ -8,10 +8,7 @@ const usersServiceInstance = new UsersService(new DatabaseService());
 @Module({
   controllers: [UsersController],
   providers: [
-    {
-      provide: UsersService,
-      useValue: usersServiceInstance,
-    },
+    {provide: UsersService,useValue: usersServiceInstance},
     DatabaseService,
   ],
   exports: [UsersService],

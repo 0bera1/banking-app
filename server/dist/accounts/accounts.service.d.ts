@@ -1,7 +1,7 @@
 import { DatabaseService } from '../database/database.service';
 import { Account } from './entities/account.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { IUsersService } from '../users/users.service';
+import { IUsersService } from '../users/interface/IUsersService';
 import { IExchangeService } from '../exchange/exchange.service';
 export interface IAccountsService {
     create(createAccountDto: CreateAccountDto & {

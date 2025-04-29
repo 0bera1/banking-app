@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-
-export interface IUsersService {
-    create(userData: any): Promise<any>;
-    remove(id: number): Promise<void>;
-    findOne(id: number): Promise<any>;
-    findByEmail(email: string): Promise<any>;
-    update(id: number, userData: any): Promise<any>;
-}
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import {IUsersService} from "./interface/IUsersService";
 
 export class UsersService implements IUsersService {
     private readonly databaseService: DatabaseService;
@@ -16,7 +12,7 @@ export class UsersService implements IUsersService {
         this.databaseService = databaseService;
     }
 
-    public async create(userData: any): Promise<any> {
+    public async create(userData: CreateUserDto): Promise<UserResponseDto> {
         return await this.databaseService.create('users', userData);
     }
 
@@ -24,11 +20,11 @@ export class UsersService implements IUsersService {
         await this.databaseService.delete('users', id);
     }
 
-    public async findOne(id: number): Promise<any> {
+    public async findOne(id: number): Promise<UserResponseDto> {
         return await this.databaseService.findOne('users', id);
     }
 
-    public async findByEmail(email: string): Promise<any> {
+    public async findByEmail(email: string): Promise<UserResponseDto> {
         const result = await this.databaseService.query(
             'SELECT * FROM users WHERE email = $1',
             [email]
@@ -36,7 +32,7 @@ export class UsersService implements IUsersService {
         return result.rows[0];
     }
 
-    public async update(id: number, userData: any): Promise<any> {
+    public async update(id: number, userData: UpdateUserDto): Promise<UserResponseDto> {
         return await this.databaseService.update('users', id, userData);
     }
 } 

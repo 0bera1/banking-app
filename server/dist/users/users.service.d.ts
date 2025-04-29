@@ -1,17 +1,14 @@
 import { DatabaseService } from '../database/database.service';
-export interface IUsersService {
-    create(userData: any): Promise<any>;
-    remove(id: number): Promise<void>;
-    findOne(id: number): Promise<any>;
-    findByEmail(email: string): Promise<any>;
-    update(id: number, userData: any): Promise<any>;
-}
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
+import { IUsersService } from "./interface/IUsersService";
 export declare class UsersService implements IUsersService {
     private readonly databaseService;
     constructor(databaseService: DatabaseService);
-    create(userData: any): Promise<any>;
+    create(userData: CreateUserDto): Promise<UserResponseDto>;
     remove(id: number): Promise<void>;
-    findOne(id: number): Promise<any>;
-    findByEmail(email: string): Promise<any>;
-    update(id: number, userData: any): Promise<any>;
+    findOne(id: number): Promise<UserResponseDto>;
+    findByEmail(email: string): Promise<UserResponseDto>;
+    update(id: number, userData: UpdateUserDto): Promise<UserResponseDto>;
 }

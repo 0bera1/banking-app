@@ -2,7 +2,8 @@ import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { Account } from './entities/account.entity';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { UsersService, IUsersService } from '../users/users.service';
+import { UsersService } from '../users/users.service';
+import { IUsersService } from '../users/interface/IUsersService';
 import { ExchangeService, IExchangeService } from '../exchange/exchange.service';
 
 export interface IAccountsService {
