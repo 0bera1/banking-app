@@ -1,5 +1,5 @@
 import { DatabaseService } from '../database/database.service';
-import { Account } from './entities/account.entity';
+import { Account } from './interface/account.interface';
 import { CreateAccountDto } from './dto/create-account.dto';
 import { IUsersService } from '../users/interface/IUsersService';
 import { IExchangeService } from '../exchange/exchange.service';

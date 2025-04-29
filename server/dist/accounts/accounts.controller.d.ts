@@ -1,6 +1,6 @@
 import { AccountsService } from './accounts.service';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { Account } from './entities/account.entity';
+import { Account } from './interface/account.interface';
 import { DatabaseService } from '../database/database.service';
 export declare class AccountsController {
     private readonly accountsService;

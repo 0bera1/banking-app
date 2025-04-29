@@ -37,7 +37,7 @@ __decorate([
     __param(1, (0, common_1.Query)('to')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExchangeController.prototype, "getExchangeRate", null);
 __decorate([
     (0, common_1.Get)('convert'),
@@ -46,13 +46,13 @@ __decorate([
     __param(2, (0, common_1.Query)('to')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Number, String, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], ExchangeController.prototype, "convertAmount", null);
 __decorate([
     (0, common_1.Get)('currencies'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Array)
 ], ExchangeController.prototype, "getSupportedCurrencies", null);
 exports.ExchangeController = ExchangeController = __decorate([
     (0, common_1.Controller)('exchange'),

@@ -18,13 +18,7 @@ exports.ExchangeModule = ExchangeModule;
 exports.ExchangeModule = ExchangeModule = __decorate([
     (0, common_1.Module)({
         controllers: [exchange_controller_1.ExchangeController],
-        providers: [
-            {
-                provide: exchange_service_1.ExchangeService,
-                useValue: exchangeServiceInstance,
-            },
-            database_service_1.DatabaseService,
-        ],
+        providers: [{ provide: exchange_service_1.ExchangeService, useValue: exchangeServiceInstance, }, database_service_1.DatabaseService,],
         exports: [exchange_service_1.ExchangeService],
     })
 ], ExchangeModule);
