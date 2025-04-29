@@ -1,18 +1,18 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { DatabaseModule } from './database/database.module';
-import { UsersModule } from './users/users.module';
-import { AuthModule } from './auth/auth.module';
-import { AccountsModule } from './accounts/accounts.module';
-import { TransactionsModule } from './transactions/transactions.module';
-import { AuditModule } from './audit/audit.module';
-import { ExchangeModule } from './exchange/exchange.module';
-import { TransactionLimitsModule } from './transactions/transaction-limits.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import {Module} from '@nestjs/common';
+import {ConfigModule} from '@nestjs/config';
+import {DatabaseModule} from './database/database.module';
+import {UsersModule} from './users/users.module';
+import {AuthModule} from './auth/auth.module';
+import {AccountsModule} from './accounts/accounts.module';
+import {TransactionsModule} from './transactions/transactions.module';
+import {AuditModule} from './audit/audit.module';
+import {ExchangeModule} from './exchange/exchange.module';
+import {TransactionLimitsModule} from './transactions/transaction-limits.module';
+import {AppController} from './app.controller';
+import {AppService} from './app.service';
 
 @Module({
-  imports: [ConfigModule.forRoot({isGlobal: true,}),
+    imports: [ConfigModule.forRoot({isGlobal: true,}),
         DatabaseModule,
         UsersModule,
         AuthModule,
@@ -21,8 +21,9 @@ import { AppService } from './app.service';
         AuditModule,
         ExchangeModule,
         TransactionLimitsModule
-  ],
-  controllers: [AppController],
-  providers: [AppService],
+    ],
+    controllers: [AppController],
+    providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+}

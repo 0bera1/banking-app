@@ -22,8 +22,8 @@ export class ExchangeService implements IExchangeService {
     }
 
     public async getExchangeRate(fromCurrency: string, toCurrency: string): Promise<number> {
-        const fromRate = this.exchangeRates[fromCurrency.toUpperCase()];
-        const toRate = this.exchangeRates[toCurrency.toUpperCase()];
+        const fromRate:number = this.exchangeRates[fromCurrency.toUpperCase()];
+        const toRate:number = this.exchangeRates[toCurrency.toUpperCase()];
 
         if (!fromRate || !toRate) {
             throw new Error('Desteklenmeyen para birimi');

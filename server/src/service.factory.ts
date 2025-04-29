@@ -9,7 +9,6 @@ import {AuditService} from './audit/audit.service';
 import {JwtService} from '@nestjs/jwt';
 import {AppService} from './app.service';
 
-// Sıralı bağımlılıkları oluştur
 const databaseService = new DatabaseService();
 const usersService = new UsersService(databaseService);
 const jwtService = new JwtService({ secret: process.env.JWT_SECRET || 'your-secret-key' });

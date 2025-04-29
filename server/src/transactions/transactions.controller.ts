@@ -20,7 +20,7 @@ export class TransactionsController {
     }
 
     @Post()
-    public async create(@Body() createTransactionDto: CreateTransactionDto, @Req() req) {
+    public async create(@Body() createTransactionDto: CreateTransactionDto, @Req() req):Promise<any> {
         try {
             return await this.transactionsService.createTransaction(
                 req.user.id,

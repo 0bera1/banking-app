@@ -7,7 +7,7 @@ export class TransactionLimitsService {
     private readonly exchangeService: ExchangeService,
   ) {}
 
-  async getLimits(userId: number) {
+  async getLimits(userId: number):Promise<any> {
     const query = `
       SELECT * FROM transaction_limits 
       WHERE user_id = $1
@@ -20,7 +20,7 @@ export class TransactionLimitsService {
     const limits = await this.getLimits(userId);
     if (!limits) return true; // Limit tanımlanmamışsa işleme izin ver
 
-    const convertedAmount = await this.exchangeService.convertAmount(
+    const convertedAmount:number = await this.exchangeService.convertAmount(
       amount,
       currency,
       limits.currency
@@ -36,7 +36,7 @@ export class TransactionLimitsService {
     `;
 
     const result = await this.databaseService.query(dailyQuery, [userId]);
-    const dailyTotal = parseFloat(result.rows[0].total);
+    const dailyTotal:number = parseFloat(result.rows[0].total);
 
     return (dailyTotal + convertedAmount) <= limits.daily_limit;
   }
@@ -45,7 +45,7 @@ export class TransactionLimitsService {
     const limits = await this.getLimits(userId);
     if (!limits) return true;
 
-    const convertedAmount = await this.exchangeService.convertAmount(
+    const convertedAmount:number = await this.exchangeService.convertAmount(
       amount,
       currency,
       limits.currency
@@ -61,7 +61,7 @@ export class TransactionLimitsService {
     `;
 
     const result = await this.databaseService.query(weeklyQuery, [userId]);
-    const weeklyTotal = parseFloat(result.rows[0].total);
+    const weeklyTotal:number = parseFloat(result.rows[0].total);
 
     return (weeklyTotal + convertedAmount) <= limits.weekly_limit;
   }
@@ -70,7 +70,7 @@ export class TransactionLimitsService {
     const limits = await this.getLimits(userId);
     if (!limits) return true;
 
-    const convertedAmount = await this.exchangeService.convertAmount(
+    const convertedAmount:number = await this.exchangeService.convertAmount(
       amount,
       currency,
       limits.currency
@@ -86,7 +86,7 @@ export class TransactionLimitsService {
     `;
 
     const result = await this.databaseService.query(monthlyQuery, [userId]);
-    const monthlyTotal = parseFloat(result.rows[0].total);
+    const monthlyTotal:number = parseFloat(result.rows[0].total);
 
     return (monthlyTotal + convertedAmount) <= limits.monthly_limit;
   }
@@ -95,7 +95,7 @@ export class TransactionLimitsService {
     const limits = await this.getLimits(userId);
     if (!limits) return true;
 
-    const convertedAmount = await this.exchangeService.convertAmount(
+    const convertedAmount:number = await this.exchangeService.convertAmount(
       amount,
       currency,
       limits.currency
@@ -110,12 +110,12 @@ export class TransactionLimitsService {
     monthly_limit?: number;
     single_transaction_limit?: number;
     currency?: string;
-  }) {
+  }):Promise<void> {
     const fields = [];
     const values = [];
-    let paramCount = 1;
+    let paramCount:number = 1;
 
-    Object.entries(limits).forEach(([key, value]) => {
+    Object.entries(limits).forEach(([key, value]):void => {
       if (value !== undefined) {
         fields.push(`${key} = $${paramCount}`);
         values.push(value);
@@ -128,7 +128,7 @@ export class TransactionLimitsService {
     values.push(userId);
     const query = `
       INSERT INTO transaction_limits (user_id, ${Object.keys(limits).join(', ')})
-      VALUES ($${paramCount}, ${values.slice(0, -1).map((_, i) => `$${i + 1}`).join(', ')})
+      VALUES ($${paramCount}, ${values.slice(0, -1).map((_, i):string => `$${i + 1}`).join(', ')})
       ON CONFLICT (user_id) DO UPDATE SET
       ${fields.join(', ')}
     `;

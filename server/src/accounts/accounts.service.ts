@@ -220,7 +220,7 @@ export class AccountsService implements IAccountsService {
     // Bakiye güncelleme
     async updateBalance(id: number, amount: number, user_id: number): Promise<Account> {
         // Önce hesabın kullanıcıya ait olduğunu kontrol et
-        const account = await this.findOne(id);
+        const account:Account = await this.findOne(id);
         if (!account) {
             throw new NotFoundException('Hesap bulunamadı');
         }
@@ -243,7 +243,7 @@ export class AccountsService implements IAccountsService {
     // Hesap durumu güncelleme
     async updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<Account> {
         // Önce hesabın kullanıcıya ait olduğunu kontrol et
-        const account = await this.findOne(id);
+        const account:Account = await this.findOne(id);
         if (!account) {
             throw new NotFoundException('Hesap bulunamadı');
         }
@@ -275,7 +275,7 @@ export class AccountsService implements IAccountsService {
         }
 
         // Hesabın kullanıcıya ait olduğunu kontrol et
-        const account = await this.findOne(id);
+        const account:Account = await this.findOne(id);
         if (!account) {
             throw new NotFoundException('Hesap bulunamadı');
         }
@@ -310,7 +310,7 @@ export class AccountsService implements IAccountsService {
         }
 
         // Hesabın kullanıcıya ait olduğunu kontrol et
-        const account = await this.findOne(id);
+        const account:Account = await this.findOne(id);
         if (!account) {
             throw new NotFoundException('Hesap bulunamadı');
         }
@@ -344,7 +344,7 @@ export class AccountsService implements IAccountsService {
     }
 
     async getBalance(id: number, currency?: string) {
-        const account = await this.findOne(id);
+        const account:Account = await this.findOne(id);
         if (!account) {
             throw new Error('Hesap bulunamadı');
         }
