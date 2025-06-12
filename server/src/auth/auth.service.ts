@@ -1,27 +1,16 @@
 import {UnauthorizedException} from '@nestjs/common';
 import {JwtService} from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import {IUsersService} from "../users/interface/IUsersService";
+import {UserRepository} from "../users/interface/UserRepository";
 import {UserResponseDto} from "../users/dto/user-response.dto";
+import {AuthRepository} from "./interface/AuthRepository";
 
-export interface IAuthService {
-    register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<any>;
-
-    validateUser(email: string, password: string): Promise<any>;
-
-    login(user: any): Promise<{ access_token: string; user: any }>;
-
-    verifyToken(token: string): Promise<any>;
-
-    hashPassword(password: string): Promise<string>;
-}
-
-export class AuthService implements IAuthService {
-    private readonly usersService: IUsersService;
+export class AuthService implements AuthRepository {
+    private readonly usersService: UserRepository;
     private readonly jwtService: JwtService;
 
     public constructor(
-        usersService: IUsersService,
+        usersService: UserRepository,
         jwtService: JwtService,
     ) {
         this.usersService = usersService;

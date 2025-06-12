@@ -1,10 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { DatabaseRepository } from './interfaces/database.interface';
+
+export interface QueryResult<T = any> {
+    rows: T[];
+    rowCount: number;
+}
 
 @Injectable()
-export class DatabaseService {
-  // Pool, veritabanı bağlantılarını yönetmek için kullanılır
-  private pool: Pool;
+export class DatabaseService implements DatabaseRepository {
+  private readonly pool: Pool;
 
   constructor() {
     console.log('Initializing database connection with config:', {
@@ -22,18 +27,21 @@ export class DatabaseService {
         port: parseInt(process.env.DB_PORT || '5432'),
     });
 
-    this.pool.on('error', (err):void => {
+    this.initializePool();
+  }
+
+  private initializePool(): void {
+    this.pool.on('error', (err: Error): void => {
         console.error('Unexpected error on idle client', err);
     });
 
-    this.pool.on('connect', ():void => {
+    this.pool.on('connect', (): void => {
         console.log('New client connected to database');
     });
   }
 
-  // params: Sorgu parametreleri (SQL injection'ı önlemek için)
-  async query(text: string, params?: any): Promise<any> {
-    const start:number = Date.now();
+  public async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+    const start: number = Date.now();
     try {
         console.log('Executing query:', text);
         console.log('With params:', params);
@@ -44,79 +52,85 @@ export class DatabaseService {
         }
         
         const res = await this.pool.query(text, params);
-        const duration:number = Date.now() - start;
+        const duration: number = Date.now() - start;
+        
         console.log('Query executed successfully', {
             text,
             params,
             duration,
-            rowCount: res.rowCount,
-            rows: res.rows
+            rowCount: res.rowCount
         });
+        
         return res;
     } catch (error) {
         console.error('Error executing query:', {
             text,
             params,
-            error: {
-                message: error.message,
-                code: error.code,
-                stack: error.stack
-            }
+            error: error instanceof Error ? error.message : 'Unknown error'
         });
         throw error;
     }
   }
 
-  // Transaction yönetimi için client alma metodu
-  async getClient(): Promise<PoolClient> {
+  public async getClient(): Promise<PoolClient> {
     return await this.pool.connect();
   }
 
-  async beginTransaction(client: PoolClient): Promise<void> {
+  public async beginTransaction(client: PoolClient): Promise<void> {
     await client.query('BEGIN');
   }
 
-  async commitTransaction(client: PoolClient): Promise<void> {
+  public async commitTransaction(client: PoolClient): Promise<void> {
     await client.query('COMMIT');
   }
 
-  async rollbackTransaction(client: PoolClient): Promise<void> {
+  public async rollbackTransaction(client: PoolClient): Promise<void> {
     await client.query('ROLLBACK');
   }
 
-  async findOne(table: string, id: number): Promise<any> {
-    const result = await this.query(`SELECT * FROM ${table} WHERE id = $1`, [id]);
+  public async findOne<T = any>(table: string, id: number): Promise<T> {
+    const result = await this.query<T>(`SELECT * FROM ${table} WHERE id = $1`, [id]);
     return result.rows[0];
   }
 
-  async findAll(table: string): Promise<any[]> {
-    const result = await this.query(`SELECT * FROM ${table}`);
+  public async findAll<T = any>(table: string): Promise<T[]> {
+    const result = await this.query<T>(`SELECT * FROM ${table}`);
     return result.rows;
   }
 
-  async create(table: string, data: Record<string, any>): Promise<any> {
-    const columns : string = Object.keys(data).join(', ');
+  public async create<T = any>(table: string, data: Record<string, any>): Promise<T> {
+    const columns = Object.keys(data);
     const values = Object.values(data);
-    const placeholders :string = values.map((_, index:number):string => `$${index + 1}`).join(', ');
-    
-    const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`;
-    const result = await this.query(query, values);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = columns.join(', ');
+
+    const query = `
+        INSERT INTO ${table} (${columnNames})
+        VALUES (${placeholders})
+        RETURNING *
+    `;
+
+    const result = await this.query<T>(query, values);
     return result.rows[0];
   }
 
-  async update(table: string, id: number, data: Record<string, any>): Promise<any> {
-    const setClause : string = Object.keys(data)
-      .map((key:string, index:number):string => `${key} = $${index + 1}`)
-      .join(', ');
-    
-    const values = [...Object.values(data), id];
-    const query = `UPDATE ${table} SET ${setClause} WHERE id = $${values.length} RETURNING *`;
-    
-    const result = await this.query(query, values);
+  public async update<T = any>(table: string, id: number, data: Record<string, any>): Promise<T> {
+    const columns = Object.keys(data);
+    const values = Object.values(data);
+    const setClause = columns.map((col, i) => `${col} = $${i + 2}`).join(', ');
+
+    const query = `
+        UPDATE ${table}
+        SET ${setClause}
+        WHERE id = $1
+        RETURNING *
+    `;
+
+    const result = await this.query<T>(query, [id, ...values]);
     return result.rows[0];
   }
 
-  async delete(table: string, id: number): Promise<void> {
+  public async delete(table: string, id: number): Promise<void> {
     await this.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
   }
 }

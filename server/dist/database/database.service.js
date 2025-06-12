@@ -27,6 +27,9 @@ let DatabaseService = class DatabaseService {
             password: process.env.DB_PASSWORD || 'postgres',
             port: parseInt(process.env.DB_PORT || '5432'),
         });
+        this.initializePool();
+    }
+    initializePool() {
         this.pool.on('error', (err) => {
             console.error('Unexpected error on idle client', err);
         });
@@ -49,8 +52,7 @@ let DatabaseService = class DatabaseService {
                 text,
                 params,
                 duration,
-                rowCount: res.rowCount,
-                rows: res.rows
+                rowCount: res.rowCount
             });
             return res;
         }
@@ -58,11 +60,7 @@ let DatabaseService = class DatabaseService {
             console.error('Error executing query:', {
                 text,
                 params,
-                error: {
-                    message: error.message,
-                    code: error.code,
-                    stack: error.stack
-                }
+                error: error instanceof Error ? error.message : 'Unknown error'
             });
             throw error;
         }
@@ -88,20 +86,29 @@ let DatabaseService = class DatabaseService {
         return result.rows;
     }
     async create(table, data) {
-        const columns = Object.keys(data).join(', ');
+        const columns = Object.keys(data);
         const values = Object.values(data);
-        const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
-        const query = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) RETURNING *`;
+        const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+        const columnNames = columns.join(', ');
+        const query = `
+        INSERT INTO ${table} (${columnNames})
+        VALUES (${placeholders})
+        RETURNING *
+    `;
         const result = await this.query(query, values);
         return result.rows[0];
     }
     async update(table, id, data) {
-        const setClause = Object.keys(data)
-            .map((key, index) => `${key} = $${index + 1}`)
-            .join(', ');
-        const values = [...Object.values(data), id];
-        const query = `UPDATE ${table} SET ${setClause} WHERE id = $${values.length} RETURNING *`;
-        const result = await this.query(query, values);
+        const columns = Object.keys(data);
+        const values = Object.values(data);
+        const setClause = columns.map((col, i) => `${col} = $${i + 2}`).join(', ');
+        const query = `
+        UPDATE ${table}
+        SET ${setClause}
+        WHERE id = $1
+        RETURNING *
+    `;
+        const result = await this.query(query, [id, ...values]);
         return result.rows[0];
     }
     async delete(table, id) {

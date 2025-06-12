@@ -22,13 +22,23 @@ let TransactionsController = class TransactionsController {
         this.transactionsService = transactionsService;
         this.databaseService = databaseService;
     }
-    async create(createTransactionDto, req) {
-        try {
-            return await this.transactionsService.createTransaction(req.user.id, createTransactionDto.from_account_id, createTransactionDto.receiver_iban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
+    async create(createTransactionDto) {
+        const result = await this.transactionsService.createTransaction(createTransactionDto.sender_id, createTransactionDto.from_account_id, createTransactionDto.receiver_iban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
+        return result;
+    }
+    async getUserTransactions(userId) {
+        const result = await this.transactionsService.getTransactionsByUserId(parseInt(userId));
+        return result;
+    }
+    async getAccountTransactions(accountId) {
+        const accountResult = await this.databaseService.query('SELECT id FROM accounts WHERE id = $1', [accountId]);
+        if (!accountResult.rows[0]) {
+            throw new Error('Hesap bulunamadı');
         }
-        catch (error) {
-            throw new common_1.HttpException(error.message || 'İşlem oluşturulurken bir hata oluştu', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        const result = await this.transactionsService.getTransactions({
+            account_id: accountResult.rows[0].id
+        });
+        return result;
     }
     async findAll(queryParams, req) {
         try {
@@ -49,24 +59,29 @@ let TransactionsController = class TransactionsController {
             throw new common_1.HttpException(error.message || 'İşlemler getirilirken bir hata oluştu', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    async findByUserId(req) {
-        try {
-            return await this.transactionsService.getTransactionsByUserId(req.user.id);
-        }
-        catch (error) {
-            throw new common_1.HttpException(error.message || 'Kullanıcı işlemleri getirilirken bir hata oluştu', error.status || common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
 };
 exports.TransactionsController = TransactionsController;
 __decorate([
     (0, common_1.Post)(),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], TransactionsController.prototype, "create", null);
+__decorate([
+    (0, common_1.Get)('user/:userId'),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TransactionsController.prototype, "getUserTransactions", null);
+__decorate([
+    (0, common_1.Get)('account/:accountId'),
+    __param(0, (0, common_1.Param)('accountId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], TransactionsController.prototype, "getAccountTransactions", null);
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)()),
@@ -75,13 +90,6 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], TransactionsController.prototype, "findAll", null);
-__decorate([
-    (0, common_1.Get)('user'),
-    __param(0, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], TransactionsController.prototype, "findByUserId", null);
 exports.TransactionsController = TransactionsController = __decorate([
     (0, common_1.Controller)('transactions'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

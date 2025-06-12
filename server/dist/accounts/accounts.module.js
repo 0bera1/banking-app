@@ -8,28 +8,50 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountsModule = void 0;
 const common_1 = require("@nestjs/common");
-const accounts_service_1 = require("./accounts.service");
 const accounts_controller_1 = require("./accounts.controller");
-const database_service_1 = require("../database/database.service");
-const users_service_1 = require("../users/users.service");
-const exchange_service_1 = require("../exchange/exchange.service");
-const accountsServiceInstance = new accounts_service_1.AccountsService(new database_service_1.DatabaseService(), new users_service_1.UsersService(new database_service_1.DatabaseService()), new exchange_service_1.ExchangeService(new database_service_1.DatabaseService()));
+const accounts_service_1 = require("./accounts.service");
+const account_repository_1 = require("./repositories/account.repository");
+const account_validator_1 = require("./validators/account.validator");
+const database_module_1 = require("../database/database.module");
+const users_module_1 = require("../users/users.module");
+const deposit_handler_1 = require("./handlers/deposit-handler");
+const withdraw_handler_1 = require("./handlers/withdraw-handler");
+const create_account_handler_1 = require("./handlers/create-account-handler");
+const get_account_handler_1 = require("./handlers/get-account-handler");
+const delete_account_handler_1 = require("./handlers/delete-account-handler");
+const get_balance_handler_1 = require("./handlers/get-balance-handler");
+const verify_iban_handler_1 = require("./handlers/verify-iban-handler");
+const update_status_handler_1 = require("./handlers/update-status-handler");
 let AccountsModule = class AccountsModule {
 };
 exports.AccountsModule = AccountsModule;
 exports.AccountsModule = AccountsModule = __decorate([
     (0, common_1.Module)({
+        imports: [database_module_1.DatabaseModule, users_module_1.UsersModule],
         controllers: [accounts_controller_1.AccountsController],
         providers: [
             {
-                provide: accounts_service_1.AccountsService,
-                useValue: accountsServiceInstance,
+                provide: 'IAccountService',
+                useClass: accounts_service_1.AccountService
             },
-            database_service_1.DatabaseService,
-            users_service_1.UsersService,
-            exchange_service_1.ExchangeService,
+            {
+                provide: 'IAccountRepository',
+                useClass: account_repository_1.AccountRepository
+            },
+            {
+                provide: 'IAccountValidator',
+                useClass: account_validator_1.AccountValidator
+            },
+            deposit_handler_1.DepositHandler,
+            withdraw_handler_1.WithdrawHandler,
+            create_account_handler_1.CreateAccountHandler,
+            get_account_handler_1.GetAccountHandler,
+            delete_account_handler_1.DeleteAccountHandler,
+            get_balance_handler_1.GetBalanceHandler,
+            verify_iban_handler_1.VerifyIbanHandler,
+            update_status_handler_1.UpdateStatusHandler
         ],
-        exports: [accounts_service_1.AccountsService],
+        exports: ['IAccountService']
     })
 ], AccountsModule);
 //# sourceMappingURL=accounts.module.js.map

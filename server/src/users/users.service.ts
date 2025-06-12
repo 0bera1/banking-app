@@ -3,25 +3,39 @@ import { DatabaseService } from '../database/database.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import {IUsersService} from "./interface/IUsersService";
+import {UserRepository} from "./interface/UserRepository";
 
-export class UsersService implements IUsersService {
-    private readonly databaseService: DatabaseService;
+@Injectable()
+export class UsersService implements UserRepository {
+    constructor(private readonly databaseService: DatabaseService) {}
 
-    public constructor(databaseService: DatabaseService) {
-        this.databaseService = databaseService;
+    async create(userData: CreateUserDto): Promise<any> {
+        const data = {
+            ...userData,
+            created_at: new Date(),
+            updated_at: new Date()
+        };
+        return await this.databaseService.create('users', data);
     }
 
-    public async create(userData: CreateUserDto): Promise<UserResponseDto> {
-        return await this.databaseService.create('users', userData);
+    async findOne(id: number): Promise<any> {
+        const result = await this.databaseService.query(
+            'SELECT * FROM users WHERE id = $1',
+            [id]
+        );
+        return result.rows[0];
     }
 
-    public async remove(id: number): Promise<void> {
+    async update(id: number, userData: UpdateUserDto): Promise<any> {
+        const data = {
+            ...userData,
+            updated_at: new Date()
+        };
+        return await this.databaseService.update('users', id, data);
+    }
+
+    async remove(id: number): Promise<void> {
         await this.databaseService.delete('users', id);
-    }
-
-    public async findOne(id: number): Promise<UserResponseDto> {
-        return await this.databaseService.findOne('users', id);
     }
 
     public async findByEmail(email: string): Promise<UserResponseDto> {
@@ -30,9 +44,5 @@ export class UsersService implements IUsersService {
             [email]
         );
         return result.rows[0];
-    }
-
-    public async update(id: number, userData: UpdateUserDto): Promise<UserResponseDto> {
-        return await this.databaseService.update('users', id, userData);
     }
 } 

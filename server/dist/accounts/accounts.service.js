@@ -1,266 +1,89 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AccountsService = void 0;
-const common_1 = require("@nestjs/common");
-class AccountsService {
-    constructor(databaseService, usersService, exchangeService) {
-        this.databaseService = databaseService;
+exports.AccountService = void 0;
+class AccountService {
+    constructor(repository, usersService, validator) {
+        this.repository = repository;
         this.usersService = usersService;
-        this.exchangeService = exchangeService;
+        this.validator = validator;
     }
-    generateIban() {
-        const randomNumber = Math.floor(Math.random() * 1000000000000000000000000).toString().padStart(24, '0');
-        return `TR${randomNumber}`;
+    async getAccountBalance(accountId) {
+        const balance = await this.repository.getBalance(accountId);
+        return balance.balance;
     }
-    async isIbanUnique(iban) {
-        const query = 'SELECT COUNT(*) FROM accounts WHERE iban = $1';
-        const result = await this.databaseService.query(query, [iban]);
-        return result.rows[0].count === '0';
+    async transferMoney(fromAccountId, toAccountId, amount) {
+        await this.validator.validateTransfer(fromAccountId, toAccountId, amount);
+        await this.repository.updateBalance(fromAccountId, -amount, 0);
+        await this.repository.updateBalance(toAccountId, amount, 0);
     }
-    async generateUniqueIban() {
-        let iban;
-        let isUnique = false;
-        while (!isUnique) {
-            iban = this.generateIban();
-            isUnique = await this.isIbanUnique(iban);
+    async createAccount(userId, initialBalance) {
+        await this.validator.validateAccountCreation(userId, initialBalance);
+        const user = await this.usersService.findOne(userId);
+        if (!user) {
+            throw new Error('Kullanıcı bulunamadı');
         }
-        return iban;
+        const createAccountDto = {
+            user_id: userId,
+            account_number: this.generateAccountNumber(),
+            balance: initialBalance,
+            currency: 'TRY',
+            status: 'active',
+            iban: this.generateIban()
+        };
+        return await this.repository.create(createAccountDto);
     }
-    generateCardNumber() {
-        const prefix = Math.random() > 0.5 ? '4' : '5';
-        let cardNumber = prefix;
-        for (let i = 0; i < 14; i++) {
-            cardNumber += Math.floor(Math.random() * 10);
-        }
-        let sum = 0;
-        let isEven = false;
-        for (let i = cardNumber.length - 1; i >= 0; i--) {
-            let digit = parseInt(cardNumber[i]);
-            if (isEven) {
-                digit *= 2;
-                if (digit > 9) {
-                    digit -= 9;
-                }
-            }
-            sum += digit;
-            isEven = !isEven;
-        }
-        const checkDigit = (10 - (sum % 10)) % 10;
-        return cardNumber + checkDigit;
+    async closeAccount(accountId) {
+        await this.validator.validateAccountClosure(accountId);
+        await this.repository.remove(accountId, 0);
     }
     async create(createAccountDto) {
-        try {
-            console.log('Creating account with data:', createAccountDto);
-            if (!createAccountDto.user_id) {
-                console.error('User ID is missing');
-                throw new common_1.BadRequestException('Kullanıcı ID\'si bulunamadı');
-            }
-            const user = await this.usersService.findOne(createAccountDto.user_id);
-            if (!user) {
-                console.error('User not found:', createAccountDto.user_id);
-                throw new common_1.NotFoundException('Kullanıcı bulunamadı');
-            }
-            const iban = await this.generateUniqueIban();
-            console.log('Generated IBAN:', iban);
-            const query = `
-                INSERT INTO accounts 
-                (card_number, card_holder_name, card_brand, card_issuer, card_type, balance, user_id, currency, iban)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-                RETURNING *
-            `;
-            const values = [
-                this.generateCardNumber(),
-                createAccountDto.cardHolderName,
-                createAccountDto.cardBrand,
-                createAccountDto.cardIssuer,
-                createAccountDto.cardType,
-                createAccountDto.initialBalance || 0,
-                createAccountDto.user_id,
-                createAccountDto.currency || 'TRY',
-                iban
-            ];
-            console.log('Executing query:', query);
-            console.log('With values:', values);
-            const result = await this.databaseService.query(query, values);
-            console.log('Query result:', result);
-            if (!result.rows || result.rows.length === 0) {
-                console.error('No rows returned from query');
-                throw new Error('Hesap oluşturulamadı');
-            }
-            return result.rows[0];
-        }
-        catch (error) {
-            console.error('Error in create:', error);
-            if (error.code === '23505') {
-                throw new common_1.BadRequestException('Bu kart numarası zaten kullanımda');
-            }
-            if (error instanceof common_1.BadRequestException || error instanceof common_1.NotFoundException) {
-                throw error;
-            }
-            console.error('Detailed error:', {
-                message: error.message,
-                code: error.code,
-                stack: error.stack
-            });
-            throw new Error(`Hesap oluşturulurken bir hata oluştu: ${error.message}`);
-        }
+        await this.validator.validateAccountCreation(createAccountDto.user_id, createAccountDto.balance);
+        return await this.repository.create(createAccountDto);
     }
     async remove(id, user_id) {
-        const account = await this.findOne(id);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.user_id !== user_id) {
-            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
-        }
-        const query = 'DELETE FROM accounts WHERE id = $1 AND user_id = $2';
-        await this.databaseService.query(query, [id, user_id]);
+        await this.validator.validateAccountClosure(id);
+        await this.repository.remove(id, user_id);
     }
     async findOne(id) {
-        const query = 'SELECT * FROM accounts WHERE id = $1';
-        const result = await this.databaseService.query(query, [id]);
-        return result.rows[0];
+        return await this.repository.findOne(id);
     }
     async findByUserId(user_id) {
-        try {
-            console.log('Finding accounts for user:', user_id);
-            const query = 'SELECT * FROM accounts WHERE user_id = $1';
-            console.log('Executing query:', query);
-            console.log('With params:', [user_id]);
-            const result = await this.databaseService.query(query, [user_id]);
-            console.log('Query result:', result);
-            if (!result || !result.rows) {
-                console.error('No result or rows from query');
-                return [];
-            }
-            console.log('Found accounts:', result.rows);
-            return result.rows;
-        }
-        catch (error) {
-            console.error('Error in findByUserId:', error);
-            console.error('Error details:', {
-                message: error.message,
-                code: error.code,
-                stack: error.stack
-            });
-            throw new Error(`Hesaplar getirilirken bir hata oluştu: ${error.message}`);
-        }
+        return await this.repository.findByUserId(user_id);
     }
     async findByCardNumber(cardNumber) {
-        const query = 'SELECT * FROM accounts WHERE card_number = $1';
-        const result = await this.databaseService.query(query, [cardNumber]);
-        return result.rows[0];
+        return await this.repository.findByCardNumber(cardNumber);
     }
     async updateBalance(id, amount, user_id) {
-        const account = await this.findOne(id);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.user_id !== user_id) {
-            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
-        }
-        const query = `
-            UPDATE accounts 
-            SET balance = balance + $1
-            WHERE id = $2 AND user_id = $3
-            RETURNING *
-        `;
-        const result = await this.databaseService.query(query, [amount, id, user_id]);
-        return result.rows[0];
+        await this.validator.validateBalanceUpdate(id, amount);
+        return await this.repository.updateBalance(id, amount, user_id);
     }
     async updateStatus(id, status, user_id) {
-        const account = await this.findOne(id);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.user_id !== user_id) {
-            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
-        }
-        const query = `
-            UPDATE accounts 
-            SET status = $1
-            WHERE id = $2 AND user_id = $3
-            RETURNING *
-        `;
-        const result = await this.databaseService.query(query, [status, id, user_id]);
-        return result.rows[0];
+        await this.validator.validateStatusUpdate(id, status);
+        return await this.repository.updateStatus(id, status, user_id);
     }
     async findAll() {
-        const query = 'SELECT * FROM accounts';
-        const result = await this.databaseService.query(query);
-        return result.rows;
+        return await this.repository.findAll();
     }
     async deposit(id, amount, user_id) {
-        if (amount <= 0) {
-            throw new common_1.BadRequestException('Yatırılacak tutar pozitif olmalıdır');
-        }
-        const account = await this.findOne(id);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.user_id !== user_id) {
-            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
-        }
-        if (account.status !== 'active') {
-            throw new common_1.BadRequestException('Bu hesap aktif değil');
-        }
-        const query = `
-            UPDATE accounts 
-            SET balance = balance + $1 
-            WHERE id = $2 AND user_id = $3
-            RETURNING *
-        `;
-        const result = await this.databaseService.query(query, [amount, id, user_id]);
-        if (result.rows.length === 0) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        return result.rows[0];
+        await this.validator.validateDeposit(id, amount);
+        return await this.repository.deposit(id, amount, user_id);
     }
     async withdraw(id, amount, user_id) {
-        if (amount <= 0) {
-            throw new common_1.BadRequestException('Çekilecek tutar pozitif olmalıdır');
-        }
-        const account = await this.findOne(id);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.user_id !== user_id) {
-            throw new common_1.BadRequestException('Bu hesap üzerinde işlem yapmaya yetkiniz yok');
-        }
-        if (account.status !== 'active') {
-            throw new common_1.BadRequestException('Bu hesap aktif değil');
-        }
-        if (account.balance < amount) {
-            throw new common_1.BadRequestException('Yetersiz bakiye');
-        }
-        const query = `
-            UPDATE accounts 
-            SET balance = balance - $1 
-            WHERE id = $2 AND user_id = $3
-            RETURNING *
-        `;
-        const result = await this.databaseService.query(query, [amount, id, user_id]);
-        if (result.rows.length === 0) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        return result.rows[0];
+        await this.validator.validateWithdraw(id, amount);
+        return await this.repository.withdraw(id, amount, user_id);
     }
     async getBalance(id, currency) {
-        const account = await this.findOne(id);
-        if (!account) {
-            throw new Error('Hesap bulunamadı');
-        }
-        if (!currency || currency === account.currency) {
-            return { balance: account.balance, currency: account.currency };
-        }
-        const convertedBalance = await this.exchangeService.convertAmount(account.balance, account.currency, currency);
-        return { balance: convertedBalance, currency };
+        return await this.repository.getBalance(id, currency);
     }
     async findByIban(iban) {
-        const query = 'SELECT * FROM accounts WHERE iban = $1';
-        const result = await this.databaseService.query(query, [iban]);
-        return result.rows[0];
+        return await this.repository.findByIban(iban);
+    }
+    generateAccountNumber() {
+        return Math.random().toString().slice(2, 12);
+    }
+    generateIban() {
+        return 'TR' + Math.random().toString().slice(2, 26);
     }
 }
-exports.AccountsService = AccountsService;
+exports.AccountService = AccountService;
 //# sourceMappingURL=accounts.service.js.map

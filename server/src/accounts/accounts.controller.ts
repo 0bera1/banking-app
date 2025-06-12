@@ -1,165 +1,88 @@
-import { Controller, Get, Post, Body, Param, Delete, HttpException, HttpStatus, UseGuards, Request, Put, Query, NotFoundException, BadRequestException, Req } from '@nestjs/common';
-import { AccountsService } from './accounts.service';
-import { CreateAccountDto } from './dto/create-account.dto';
-import { Account } from './interface/account.interface';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { UsersService } from '../users/users.service';
-import { DatabaseService } from '../database/database.service';
-import {UserResponseDto} from "../users/dto/user-response.dto";
+import { Controller, Get, Post, Put, Delete, Body, Param, Inject } from '@nestjs/common';
+import { AccountService } from './accounts.service';
+import { AccountRequest } from './dto/account-request.dto';
+import { AccountResponse } from './dto/account-response.dto';
+import { BalanceResponse } from './dto/balance-response.dto';
+import { AccountStatusResponse } from './dto/account-status-response.dto';
+import { IbanVerificationResponse } from './dto/iban-verification-response.dto';
 
 @Controller('accounts')
-@UseGuards(JwtAuthGuard)
 export class AccountsController {
-    private readonly accountsService: AccountsService;
-    private readonly usersService: UsersService;
-
-    public constructor(
-        accountsService: AccountsService,
-        databaseService: DatabaseService
-    ) {
-        this.accountsService = accountsService;
-        this.usersService = new UsersService(databaseService);
-    }
-
-    @Get()
-    async getUserAccounts(@Req() req) {
-        const userId = req.user.id;
-        if (!userId) {
-            throw new BadRequestException('Kullanıcı bilgisi bulunamadı');
-        }
-        return await this.accountsService.findByUserId(userId);
-    }
-
-    @Get(':id')
-    async getAccountById(@Req() req, @Param('id') id: string) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new BadRequestException('Geçersiz hesap ID formatı');
-        }
-
-        const account = await this.accountsService.findOne(accountId);
-        if (!account) {
-            throw new NotFoundException('Hesap bulunamadı');
-        }
-
-        if (account.user_id !== req.user.id) {
-            throw new HttpException('Bu hesabı görüntüleme yetkiniz yok', HttpStatus.FORBIDDEN);
-        }
-
-        return account;
-    }
+    constructor(
+        @Inject('IAccountService')
+        private readonly accountService: AccountService
+    ) {}
 
     @Post()
-    async createAccount(@Req() req, @Body() createAccountDto: CreateAccountDto) {
-        if (!req.user?.id) {
-            throw new BadRequestException('Kullanıcı bilgisi bulunamadı');
-        }
-
-        return await this.accountsService.create({
-            ...createAccountDto,
-            user_id: req.user.id
-        });
+    public async createAccount(@Body() request: AccountRequest): Promise<AccountResponse> {
+        return await this.accountService.createAccount(request.userId, request.amount);
     }
 
     @Delete(':id')
-    async deleteAccount(@Req() req, @Param('id') id: string) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new BadRequestException('Geçersiz hesap ID formatı');
-        }
-
-        await this.accountsService.remove(accountId, req.user.id);
-        return { message: 'Hesap başarıyla silindi' };
-    }
-
-    @Put(':id/deposit')
-    async deposit(@Req() req, @Param('id') id: string, @Body('amount') amount: number) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new BadRequestException('Geçersiz hesap ID formatı');
-        }
-
-        if (!amount || amount <= 0) {
-            throw new BadRequestException('Geçersiz miktar');
-        }
-
-        return await this.accountsService.deposit(accountId, amount, req.user.id);
-    }
-
-    @Put(':id/withdraw')
-    async withdraw(@Req() req, @Param('id') id: string, @Body('amount') amount: number) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new BadRequestException('Geçersiz hesap ID formatı');
-        }
-
-        if (!amount || amount <= 0) {
-            throw new BadRequestException('Geçersiz miktar');
-        }
-
-        return await this.accountsService.withdraw(accountId, amount, req.user.id);
-    }
-
-    // Kart numarasına göre hesap bulma endpoint'i
-    @Get('card/:cardNumber')
-    async findByCardNumber(@Request() req, @Param('cardNumber') cardNumber: string): Promise<Account> {
-        const account:Account = await this.accountsService.findByCardNumber(cardNumber);
-        if (!account) {
-            throw new HttpException('Hesap bulunamadı', HttpStatus.NOT_FOUND);
-        }
-        
-        if (account.user_id !== req.user.id) {
-            throw new HttpException('Bu hesabı görüntüleme yetkiniz yok', HttpStatus.FORBIDDEN);
-        }
-        
-        return account;
+    public async closeAccount(@Param('id') id: number): Promise<void> {
+        await this.accountService.closeAccount(id);
     }
 
     @Get(':id/balance')
-    getBalance(
-        @Param('id') id: string,
-        @Query('currency') currency?: string,
-    ) {
-        return this.accountsService.getBalance(+id, currency);
-    }
-
-    @Get('verify-iban/:iban')
-    async verifyIban(@Param('iban') iban: string) {
-        const account:Account = await this.accountsService.findByIban(iban);
-        if (!account) {
-            throw new NotFoundException('Hesap bulunamadı');
-        }
-
-        if (account.status === 'inactive') {
-            throw new BadRequestException('Bu IBAN\'a ait hesap aktif değil');
-        }
-
-        const user:UserResponseDto = await this.usersService.findOne(account.user_id);
-        if (!user) {
-            throw new NotFoundException('Kullanıcı bulunamadı');
-        }
-
+    public async getBalance(@Param('id') id: number): Promise<BalanceResponse> {
+        const balance = await this.accountService.getBalance(id);
         return {
-            iban: account.iban,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            status: account.status
+            balance: balance.balance,
+            currency: balance.currency
         };
     }
 
     @Put(':id/status')
-    async updateStatus(
-        @Request() req,
-        @Param('id') id: string,
-        @Body('status') status: 'active' | 'inactive' | 'blocked'
-    ): Promise<Account> {
-        try {
-            return await this.accountsService.updateStatus(+id, status, req.user.id);
-        } catch (error) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            throw new HttpException('Hesap durumu güncellenirken bir hata oluştu', HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    public async updateStatus(
+        @Param('id') id: number,
+        @Body() request: AccountRequest
+    ): Promise<AccountStatusResponse> {
+        const account = await this.accountService.updateStatus(id, request.status, request.userId);
+        return {
+            id: account.id,
+            status: account.status,
+            message: 'Hesap durumu başarıyla güncellendi'
+        };
+    }
+
+    @Post('verify-iban')
+    public async verifyIban(@Body() request: AccountRequest): Promise<IbanVerificationResponse> {
+        const account = await this.accountService.findByIban(request.iban);
+        return {
+            iban: request.iban,
+            isValid: !!account,
+            message: account ? 'IBAN doğrulandı' : 'IBAN bulunamadı'
+        };
+    }
+
+    @Post(':id/deposit')
+    public async deposit(
+        @Param('id') id: number,
+        @Body() request: AccountRequest
+    ): Promise<AccountResponse> {
+        return await this.accountService.deposit(id, request.amount, request.userId);
+    }
+
+    @Post(':id/withdraw')
+    public async withdraw(
+        @Param('id') id: number,
+        @Body() request: AccountRequest
+    ): Promise<AccountResponse> {
+        return await this.accountService.withdraw(id, request.amount, request.userId);
+    }
+
+    @Get(':id')
+    public async getAccount(@Param('id') id: number): Promise<AccountResponse> {
+        return await this.accountService.findOne(id);
+    }
+
+    @Get('user/:userId')
+    public async getUserAccounts(@Param('userId') userId: number): Promise<Array<AccountResponse>> {
+        return await this.accountService.findByUserId(userId);
+    }
+
+    @Get()
+    public async getAllAccounts(): Promise<Array<AccountResponse>> {
+        return await this.accountService.findAll();
     }
 }

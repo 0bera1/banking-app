@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Req, Query, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, UseGuards, Req, Query, HttpException, HttpStatus } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { GetTransactionsDto } from './dto/get-transactions.dto';
@@ -8,34 +8,45 @@ import { DatabaseService } from '../database/database.service';
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
 export class TransactionsController {
-    private readonly transactionsService: TransactionsService;
-    private readonly databaseService: DatabaseService;
-
-    public constructor(
-        transactionsService: TransactionsService,
-        databaseService: DatabaseService
-    ) {
-        this.transactionsService = transactionsService;
-        this.databaseService = databaseService;
-    }
+    constructor(
+        private readonly transactionsService: TransactionsService,
+        private readonly databaseService: DatabaseService
+    ) {}
 
     @Post()
-    public async create(@Body() createTransactionDto: CreateTransactionDto, @Req() req):Promise<any> {
-        try {
-            return await this.transactionsService.createTransaction(
-                req.user.id,
-                createTransactionDto.from_account_id,
-                createTransactionDto.receiver_iban,
-                createTransactionDto.amount,
-                createTransactionDto.currency,
-                createTransactionDto.description
-            );
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'İşlem oluşturulurken bir hata oluştu',
-                error.status || HttpStatus.INTERNAL_SERVER_ERROR
-            );
+    async create(@Body() createTransactionDto: CreateTransactionDto) {
+        const result = await this.transactionsService.createTransaction(
+            createTransactionDto.sender_id,
+            createTransactionDto.from_account_id,
+            createTransactionDto.receiver_iban,
+            createTransactionDto.amount,
+            createTransactionDto.currency,
+            createTransactionDto.description
+        );
+        return result;
+    }
+
+    @Get('user/:userId')
+    async getUserTransactions(@Param('userId') userId: string) {
+        const result = await this.transactionsService.getTransactionsByUserId(parseInt(userId));
+        return result;
+    }
+
+    @Get('account/:accountId')
+    async getAccountTransactions(@Param('accountId') accountId: string) {
+        const accountResult = await this.databaseService.query(
+            'SELECT id FROM accounts WHERE id = $1',
+            [accountId]
+        );
+
+        if (!accountResult.rows[0]) {
+            throw new Error('Hesap bulunamadı');
         }
+
+        const result = await this.transactionsService.getTransactions({
+            account_id: accountResult.rows[0].id
+        });
+        return result;
     }
 
     @Get()
@@ -63,18 +74,6 @@ export class TransactionsController {
         } catch (error) {
             throw new HttpException(
                 error.message || 'İşlemler getirilirken bir hata oluştu',
-                error.status || HttpStatus.INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    @Get('user')
-    public async findByUserId(@Req() req) {
-        try {
-            return await this.transactionsService.getTransactionsByUserId(req.user.id);
-        } catch (error) {
-            throw new HttpException(
-                error.message || 'Kullanıcı işlemleri getirilirken bir hata oluştu',
                 error.status || HttpStatus.INTERNAL_SERVER_ERROR
             );
         }

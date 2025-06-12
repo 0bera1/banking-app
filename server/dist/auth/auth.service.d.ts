@@ -1,19 +1,10 @@
 import { JwtService } from '@nestjs/jwt';
-import { IUsersService } from "../users/interface/IUsersService";
-export interface IAuthService {
-    register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<any>;
-    validateUser(email: string, password: string): Promise<any>;
-    login(user: any): Promise<{
-        access_token: string;
-        user: any;
-    }>;
-    verifyToken(token: string): Promise<any>;
-    hashPassword(password: string): Promise<string>;
-}
-export declare class AuthService implements IAuthService {
+import { UserRepository } from "../users/interface/UserRepository";
+import { AuthRepository } from "./interface/AuthRepository";
+export declare class AuthService implements AuthRepository {
     private readonly usersService;
     private readonly jwtService;
-    constructor(usersService: IUsersService, jwtService: JwtService);
+    constructor(usersService: UserRepository, jwtService: JwtService);
     register(username: string, email: string, password: string, first_name: string, last_name: string): Promise<{
         id: number;
         username: string;

@@ -15,200 +15,131 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("./accounts.service");
-const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
-const users_service_1 = require("../users/users.service");
-const database_service_1 = require("../database/database.service");
 let AccountsController = class AccountsController {
-    constructor(accountsService, databaseService) {
-        this.accountsService = accountsService;
-        this.usersService = new users_service_1.UsersService(databaseService);
+    constructor(accountService) {
+        this.accountService = accountService;
     }
-    async getUserAccounts(req) {
-        const userId = req.user.id;
-        if (!userId) {
-            throw new common_1.BadRequestException('Kullanıcı bilgisi bulunamadı');
-        }
-        return await this.accountsService.findByUserId(userId);
+    async createAccount(request) {
+        return await this.accountService.createAccount(request.userId, request.amount);
     }
-    async getAccountById(req, id) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new common_1.BadRequestException('Geçersiz hesap ID formatı');
-        }
-        const account = await this.accountsService.findOne(accountId);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.user_id !== req.user.id) {
-            throw new common_1.HttpException('Bu hesabı görüntüleme yetkiniz yok', common_1.HttpStatus.FORBIDDEN);
-        }
-        return account;
+    async closeAccount(id) {
+        await this.accountService.closeAccount(id);
     }
-    async createAccount(req, createAccountDto) {
-        var _a;
-        if (!((_a = req.user) === null || _a === void 0 ? void 0 : _a.id)) {
-            throw new common_1.BadRequestException('Kullanıcı bilgisi bulunamadı');
-        }
-        return await this.accountsService.create(Object.assign(Object.assign({}, createAccountDto), { user_id: req.user.id }));
-    }
-    async deleteAccount(req, id) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new common_1.BadRequestException('Geçersiz hesap ID formatı');
-        }
-        await this.accountsService.remove(accountId, req.user.id);
-        return { message: 'Hesap başarıyla silindi' };
-    }
-    async deposit(req, id, amount) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new common_1.BadRequestException('Geçersiz hesap ID formatı');
-        }
-        if (!amount || amount <= 0) {
-            throw new common_1.BadRequestException('Geçersiz miktar');
-        }
-        return await this.accountsService.deposit(accountId, amount, req.user.id);
-    }
-    async withdraw(req, id, amount) {
-        const accountId = parseInt(id, 10);
-        if (isNaN(accountId)) {
-            throw new common_1.BadRequestException('Geçersiz hesap ID formatı');
-        }
-        if (!amount || amount <= 0) {
-            throw new common_1.BadRequestException('Geçersiz miktar');
-        }
-        return await this.accountsService.withdraw(accountId, amount, req.user.id);
-    }
-    async findByCardNumber(req, cardNumber) {
-        const account = await this.accountsService.findByCardNumber(cardNumber);
-        if (!account) {
-            throw new common_1.HttpException('Hesap bulunamadı', common_1.HttpStatus.NOT_FOUND);
-        }
-        if (account.user_id !== req.user.id) {
-            throw new common_1.HttpException('Bu hesabı görüntüleme yetkiniz yok', common_1.HttpStatus.FORBIDDEN);
-        }
-        return account;
-    }
-    getBalance(id, currency) {
-        return this.accountsService.getBalance(+id, currency);
-    }
-    async verifyIban(iban) {
-        const account = await this.accountsService.findByIban(iban);
-        if (!account) {
-            throw new common_1.NotFoundException('Hesap bulunamadı');
-        }
-        if (account.status === 'inactive') {
-            throw new common_1.BadRequestException('Bu IBAN\'a ait hesap aktif değil');
-        }
-        const user = await this.usersService.findOne(account.user_id);
-        if (!user) {
-            throw new common_1.NotFoundException('Kullanıcı bulunamadı');
-        }
+    async getBalance(id) {
+        const balance = await this.accountService.getBalance(id);
         return {
-            iban: account.iban,
-            first_name: user.first_name,
-            last_name: user.last_name,
-            status: account.status
+            balance: balance.balance,
+            currency: balance.currency
         };
     }
-    async updateStatus(req, id, status) {
-        try {
-            return await this.accountsService.updateStatus(+id, status, req.user.id);
-        }
-        catch (error) {
-            if (error instanceof common_1.HttpException) {
-                throw error;
-            }
-            throw new common_1.HttpException('Hesap durumu güncellenirken bir hata oluştu', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    async updateStatus(id, request) {
+        const account = await this.accountService.updateStatus(id, request.status, request.userId);
+        return {
+            id: account.id,
+            status: account.status,
+            message: 'Hesap durumu başarıyla güncellendi'
+        };
+    }
+    async verifyIban(request) {
+        const account = await this.accountService.findByIban(request.iban);
+        return {
+            iban: request.iban,
+            isValid: !!account,
+            message: account ? 'IBAN doğrulandı' : 'IBAN bulunamadı'
+        };
+    }
+    async deposit(id, request) {
+        return await this.accountService.deposit(id, request.amount, request.userId);
+    }
+    async withdraw(id, request) {
+        return await this.accountService.withdraw(id, request.amount, request.userId);
+    }
+    async getAccount(id) {
+        return await this.accountService.findOne(id);
+    }
+    async getUserAccounts(userId) {
+        return await this.accountService.findByUserId(userId);
+    }
+    async getAllAccounts() {
+        return await this.accountService.findAll();
     }
 };
 exports.AccountsController = AccountsController;
 __decorate([
-    (0, common_1.Get)(),
-    __param(0, (0, common_1.Req)()),
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], AccountsController.prototype, "getUserAccounts", null);
-__decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", Promise)
-], AccountsController.prototype, "getAccountById", null);
-__decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "createAccount", null);
 __decorate([
     (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id')),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", Promise)
-], AccountsController.prototype, "deleteAccount", null);
-__decorate([
-    (0, common_1.Put)(':id/deposit'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)('amount')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Number]),
-    __metadata("design:returntype", Promise)
-], AccountsController.prototype, "deposit", null);
-__decorate([
-    (0, common_1.Put)(':id/withdraw'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)('amount')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, Number]),
-    __metadata("design:returntype", Promise)
-], AccountsController.prototype, "withdraw", null);
-__decorate([
-    (0, common_1.Get)('card/:cardNumber'),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Param)('cardNumber')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", Promise)
-], AccountsController.prototype, "findByCardNumber", null);
+], AccountsController.prototype, "closeAccount", null);
 __decorate([
     (0, common_1.Get)(':id/balance'),
     __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Query)('currency')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "getBalance", null);
 __decorate([
-    (0, common_1.Get)('verify-iban/:iban'),
-    __param(0, (0, common_1.Param)('iban')),
+    (0, common_1.Put)(':id/status'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Post)('verify-iban'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "verifyIban", null);
 __decorate([
-    (0, common_1.Put)(':id/status'),
-    __param(0, (0, common_1.Request)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)('status')),
+    (0, common_1.Post)(':id/deposit'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, String]),
+    __metadata("design:paramtypes", [Number, Object]),
     __metadata("design:returntype", Promise)
-], AccountsController.prototype, "updateStatus", null);
+], AccountsController.prototype, "deposit", null);
+__decorate([
+    (0, common_1.Post)(':id/withdraw'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "withdraw", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "getAccount", null);
+__decorate([
+    (0, common_1.Get)('user/:userId'),
+    __param(0, (0, common_1.Param)('userId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "getUserAccounts", null);
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], AccountsController.prototype, "getAllAccounts", null);
 exports.AccountsController = AccountsController = __decorate([
     (0, common_1.Controller)('accounts'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __metadata("design:paramtypes", [accounts_service_1.AccountsService,
-        database_service_1.DatabaseService])
+    __param(0, (0, common_1.Inject)('IAccountService')),
+    __metadata("design:paramtypes", [accounts_service_1.AccountService])
 ], AccountsController);
 //# sourceMappingURL=accounts.controller.js.map

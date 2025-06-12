@@ -1,27 +1,45 @@
 import { Module } from '@nestjs/common';
-import { AccountsService } from './accounts.service';
 import { AccountsController } from './accounts.controller';
-import { DatabaseService } from '../database/database.service';
+import { AccountService } from './accounts.service';
+import { AccountRepository } from './repositories/account.repository';
+import { AccountValidator } from './validators/account.validator';
+import { DatabaseModule } from '../database/database.module';
+import { UsersModule } from '../users/users.module';
+import { DepositHandler } from './handlers/deposit-handler';
+import { WithdrawHandler } from './handlers/withdraw-handler';
+import { CreateAccountHandler } from './handlers/create-account-handler';
+import { GetAccountHandler } from './handlers/get-account-handler';
+import { DeleteAccountHandler } from './handlers/delete-account-handler';
+import { GetBalanceHandler } from './handlers/get-balance-handler';
+import { VerifyIbanHandler } from './handlers/verify-iban-handler';
+import { UpdateStatusHandler } from './handlers/update-status-handler';
 import { UsersService } from '../users/users.service';
-import { ExchangeService } from '../exchange/exchange.service';
-
-const accountsServiceInstance = new AccountsService(
-  new DatabaseService(),
-  new UsersService(new DatabaseService()),
-  new ExchangeService(new DatabaseService())
-);
 
 @Module({
+    imports: [DatabaseModule, UsersModule],
     controllers: [AccountsController],
     providers: [
-      {
-        provide: AccountsService,
-        useValue: accountsServiceInstance,
-      },
-      DatabaseService,
-      UsersService,
-      ExchangeService,
+        {
+            provide: 'IAccountService',
+            useClass: AccountService
+        },
+        {
+            provide: 'IAccountRepository',
+            useClass: AccountRepository
+        },
+        {
+            provide: 'IAccountValidator',
+            useClass: AccountValidator
+        },
+        DepositHandler,
+        WithdrawHandler,
+        CreateAccountHandler,
+        GetAccountHandler,
+        DeleteAccountHandler,
+        GetBalanceHandler,
+        VerifyIbanHandler,
+        UpdateStatusHandler
     ],
-    exports: [AccountsService],
+    exports: ['IAccountService']
 })
 export class AccountsModule {}

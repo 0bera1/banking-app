@@ -1,6 +1,6 @@
 export interface CreateTransactionDto {
-    from_account_id: number;
-    receiver_iban: string;
+    sender_id: number;
+    receiver_id: number;
     amount: number;
     currency: string;
     description?: string;

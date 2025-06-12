@@ -1,29 +1,20 @@
-import { AccountsService } from './accounts.service';
-import { CreateAccountDto } from './dto/create-account.dto';
-import { Account } from './interface/account.interface';
-import { DatabaseService } from '../database/database.service';
+import { AccountService } from './accounts.service';
+import { AccountRequest } from './dto/account-request.dto';
+import { AccountResponse } from './dto/account-response.dto';
+import { BalanceResponse } from './dto/balance-response.dto';
+import { AccountStatusResponse } from './dto/account-status-response.dto';
+import { IbanVerificationResponse } from './dto/iban-verification-response.dto';
 export declare class AccountsController {
-    private readonly accountsService;
-    private readonly usersService;
-    constructor(accountsService: AccountsService, databaseService: DatabaseService);
-    getUserAccounts(req: any): Promise<Account[]>;
-    getAccountById(req: any, id: string): Promise<Account>;
-    createAccount(req: any, createAccountDto: CreateAccountDto): Promise<Account>;
-    deleteAccount(req: any, id: string): Promise<{
-        message: string;
-    }>;
-    deposit(req: any, id: string, amount: number): Promise<any>;
-    withdraw(req: any, id: string, amount: number): Promise<any>;
-    findByCardNumber(req: any, cardNumber: string): Promise<Account>;
-    getBalance(id: string, currency?: string): Promise<{
-        balance: number;
-        currency: string;
-    }>;
-    verifyIban(iban: string): Promise<{
-        iban: string;
-        first_name: string;
-        last_name: string;
-        status: string;
-    }>;
-    updateStatus(req: any, id: string, status: 'active' | 'inactive' | 'blocked'): Promise<Account>;
+    private readonly accountService;
+    constructor(accountService: AccountService);
+    createAccount(request: AccountRequest): Promise<AccountResponse>;
+    closeAccount(id: number): Promise<void>;
+    getBalance(id: number): Promise<BalanceResponse>;
+    updateStatus(id: number, request: AccountRequest): Promise<AccountStatusResponse>;
+    verifyIban(request: AccountRequest): Promise<IbanVerificationResponse>;
+    deposit(id: number, request: AccountRequest): Promise<AccountResponse>;
+    withdraw(id: number, request: AccountRequest): Promise<AccountResponse>;
+    getAccount(id: number): Promise<AccountResponse>;
+    getUserAccounts(userId: number): Promise<Array<AccountResponse>>;
+    getAllAccounts(): Promise<Array<AccountResponse>>;
 }

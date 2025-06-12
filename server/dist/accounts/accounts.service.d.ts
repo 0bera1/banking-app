@@ -1,51 +1,35 @@
-import { DatabaseService } from '../database/database.service';
-import { Account } from './interface/account.interface';
+import { AccountRepository } from './repositories/account.repository';
 import { CreateAccountDto } from './dto/create-account.dto';
-import { IUsersService } from '../users/interface/IUsersService';
-import { IExchangeService } from '../exchange/exchange.service';
-export interface IAccountsService {
-    create(createAccountDto: CreateAccountDto & {
-        user_id: number;
-    }): Promise<Account>;
-    remove(id: number, user_id: number): Promise<void>;
-    findOne(id: number): Promise<Account>;
-    findByUserId(user_id: number): Promise<Account[]>;
-    findByCardNumber(cardNumber: string): Promise<Account>;
-    updateBalance(id: number, amount: number, user_id: number): Promise<Account>;
-    updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<Account>;
-    findAll(): Promise<Account[]>;
-    deposit(id: number, amount: number, user_id: number): Promise<Account>;
-    withdraw(id: number, amount: number, user_id: number): Promise<Account>;
-    getBalance(id: number, currency?: string): Promise<{
-        balance: number;
-        currency: string;
-    }>;
-    findByIban(iban: string): Promise<Account>;
-}
-export declare class AccountsService implements IAccountsService {
-    private readonly databaseService;
+import { UsersService } from '../users/users.service';
+import { AccountServiceContract } from './interfaces/account.interface';
+import { AccountResponse } from './dto/account-response.dto';
+import { AccountValidator } from './validators/account.validator';
+export declare class AccountService implements AccountServiceContract {
+    private readonly repository;
     private readonly usersService;
-    private readonly exchangeService;
-    constructor(databaseService: DatabaseService, usersService: IUsersService, exchangeService: IExchangeService);
-    private generateIban;
-    private isIbanUnique;
-    private generateUniqueIban;
-    private generateCardNumber;
+    private readonly validator;
+    constructor(repository: AccountRepository, usersService: UsersService, validator: AccountValidator);
+    getAccountBalance(accountId: number): Promise<number>;
+    transferMoney(fromAccountId: number, toAccountId: number, amount: number): Promise<void>;
+    createAccount(userId: number, initialBalance: number): Promise<AccountResponse>;
+    closeAccount(accountId: number): Promise<void>;
     create(createAccountDto: CreateAccountDto & {
         user_id: number;
-    }): Promise<Account>;
+    }): Promise<AccountResponse>;
     remove(id: number, user_id: number): Promise<void>;
-    findOne(id: number): Promise<Account>;
-    findByUserId(user_id: number): Promise<Account[]>;
-    findByCardNumber(cardNumber: string): Promise<Account>;
-    updateBalance(id: number, amount: number, user_id: number): Promise<Account>;
-    updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<Account>;
-    findAll(): Promise<any>;
-    deposit(id: number, amount: number, user_id: number): Promise<any>;
-    withdraw(id: number, amount: number, user_id: number): Promise<any>;
+    findOne(id: number): Promise<AccountResponse>;
+    findByUserId(user_id: number): Promise<Array<AccountResponse>>;
+    findByCardNumber(cardNumber: string): Promise<AccountResponse>;
+    updateBalance(id: number, amount: number, user_id: number): Promise<AccountResponse>;
+    updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<AccountResponse>;
+    findAll(): Promise<Array<AccountResponse>>;
+    deposit(id: number, amount: number, user_id: number): Promise<AccountResponse>;
+    withdraw(id: number, amount: number, user_id: number): Promise<AccountResponse>;
     getBalance(id: number, currency?: string): Promise<{
         balance: number;
         currency: string;
     }>;
-    findByIban(iban: string): Promise<Account>;
+    findByIban(iban: string): Promise<AccountResponse>;
+    private generateAccountNumber;
+    private generateIban;
 }

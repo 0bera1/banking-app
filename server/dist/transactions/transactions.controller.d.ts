@@ -6,7 +6,8 @@ export declare class TransactionsController {
     private readonly transactionsService;
     private readonly databaseService;
     constructor(transactionsService: TransactionsService, databaseService: DatabaseService);
-    create(createTransactionDto: CreateTransactionDto, req: any): Promise<any>;
-    findAll(queryParams: GetTransactionsDto, req: any): Promise<any>;
-    findByUserId(req: any): Promise<any>;
+    create(createTransactionDto: CreateTransactionDto): Promise<any>;
+    getUserTransactions(userId: string): Promise<any[]>;
+    getAccountTransactions(accountId: string): Promise<any[]>;
+    findAll(queryParams: GetTransactionsDto, req: any): Promise<any[]>;
 }
