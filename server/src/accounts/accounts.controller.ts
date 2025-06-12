@@ -1,17 +1,18 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Inject } from '@nestjs/common';
-import { AccountService } from './accounts.service';
-import { AccountRequest } from './dto/account-request.dto';
-import { AccountResponse } from './dto/account-response.dto';
-import { BalanceResponse } from './dto/balance-response.dto';
-import { AccountStatusResponse } from './dto/account-status-response.dto';
-import { IbanVerificationResponse } from './dto/iban-verification-response.dto';
+import {Body, Controller, Delete, Get, Inject, Param, Post, Put} from '@nestjs/common';
+import {AccountService} from './accounts.service';
+import {AccountRequest} from './dto/account-request.dto';
+import {AccountResponse} from './dto/account-response.dto';
+import {BalanceResponse} from './dto/balance-response.dto';
+import {AccountStatusResponse} from './dto/account-status-response.dto';
+import {IbanVerificationResponse} from './dto/iban-verification-response.dto';
 
 @Controller('accounts')
 export class AccountsController {
     constructor(
         @Inject('IAccountService')
         private readonly accountService: AccountService
-    ) {}
+    ) {
+    }
 
     @Post()
     public async createAccount(@Body() request: AccountRequest): Promise<AccountResponse> {
@@ -37,7 +38,7 @@ export class AccountsController {
         @Param('id') id: number,
         @Body() request: AccountRequest
     ): Promise<AccountStatusResponse> {
-        const account = await this.accountService.updateStatus(id, request.status, request.userId);
+        const account: AccountResponse = await this.accountService.updateStatus(id, request.status, request.userId);
         return {
             id: account.id,
             status: account.status,
@@ -47,7 +48,7 @@ export class AccountsController {
 
     @Post('verify-iban')
     public async verifyIban(@Body() request: AccountRequest): Promise<IbanVerificationResponse> {
-        const account = await this.accountService.findByIban(request.iban);
+        const account: AccountResponse = await this.accountService.findByIban(request.iban);
         return {
             iban: request.iban,
             isValid: !!account,

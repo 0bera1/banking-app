@@ -9,7 +9,7 @@ interface AccountRow {
     account_number: string;
     balance: number;
     currency: string;
-    status: string;
+    status: 'active' | 'inactive' | 'blocked';
     iban: string;
     created_at: Date;
     updated_at: Date;
@@ -43,20 +43,20 @@ export class AccountRepository implements AccountRepositoryContract {
         };
     }
 
-    async updateBalance(id: number, amount: number): Promise<AccountResponse> {
+    async updateBalance(id: number, amount: number, user_id: number): Promise<AccountResponse> {
         const result = await this.databaseService.query<AccountRow>(
-            'UPDATE accounts SET balance = balance + $1 WHERE id = $2 RETURNING *',
-            [amount, id]
+            'UPDATE accounts SET balance = balance + $1 WHERE id = $2 AND user_id = $3 RETURNING *',
+            [amount, id, user_id]
         );
         return this.mapToAccountResponse(result.rows[0]);
     }
 
-    async create(userId: number, initialBalance: number, currency: string): Promise<AccountResponse> {
+    async create(createAccountDto: CreateAccountDto & { user_id: number }): Promise<AccountResponse> {
         const result = await this.databaseService.query<AccountRow>(
             `INSERT INTO accounts (user_id, balance, currency, status, iban)
-             VALUES ($1, $2, $3, 'active', $4)
+             VALUES ($1, $2, $3, $4, $5)
              RETURNING *`,
-            [userId, initialBalance, currency, this.generateIban()]
+            [createAccountDto.user_id, createAccountDto.balance, createAccountDto.currency, 'active' as const, createAccountDto.iban]
         );
         return this.mapToAccountResponse(result.rows[0]);
     }

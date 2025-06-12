@@ -40,7 +40,7 @@ export class DatabaseService implements DatabaseRepository {
     });
   }
 
-  public async query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+  public async query<T>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
     const start: number = Date.now();
     try {
         console.log('Executing query:', text);

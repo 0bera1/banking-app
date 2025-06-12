@@ -25,14 +25,14 @@ class AccountRepository {
             currency: result.rows[0].currency
         };
     }
-    async updateBalance(id, amount) {
-        const result = await this.databaseService.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2 RETURNING *', [amount, id]);
+    async updateBalance(id, amount, user_id) {
+        const result = await this.databaseService.query('UPDATE accounts SET balance = balance + $1 WHERE id = $2 AND user_id = $3 RETURNING *', [amount, id, user_id]);
         return this.mapToAccountResponse(result.rows[0]);
     }
-    async create(userId, initialBalance, currency) {
+    async create(createAccountDto) {
         const result = await this.databaseService.query(`INSERT INTO accounts (user_id, balance, currency, status, iban)
-             VALUES ($1, $2, $3, 'active', $4)
-             RETURNING *`, [userId, initialBalance, currency, this.generateIban()]);
+             VALUES ($1, $2, $3, $4, $5)
+             RETURNING *`, [createAccountDto.user_id, createAccountDto.balance, createAccountDto.currency, 'active', createAccountDto.iban]);
         return this.mapToAccountResponse(result.rows[0]);
     }
     async remove(id, userId) {

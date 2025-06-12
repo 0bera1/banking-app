@@ -8,7 +8,7 @@ export declare class DatabaseService implements DatabaseRepository {
     private readonly pool;
     constructor();
     private initializePool;
-    query<T = any>(text: string, params?: any[]): Promise<QueryResult<T>>;
+    query<T>(text: string, params?: unknown[]): Promise<QueryResult<T>>;
     getClient(): Promise<PoolClient>;
     beginTransaction(client: PoolClient): Promise<void>;
     commitTransaction(client: PoolClient): Promise<void>;

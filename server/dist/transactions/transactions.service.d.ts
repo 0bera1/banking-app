@@ -15,6 +15,6 @@ export declare class TransactionsService implements ITransactionsService {
     private readonly transactionLimitsService;
     constructor(databaseService: DatabaseService, exchangeService: IExchangeService, auditService: IAuditService, transactionLimitsService: TransactionLimitsService);
     createTransaction(userId: number, fromAccountId: number, receiverIban: string, amount: number, currency: string, description?: string): Promise<any>;
-    getTransactions(getTransactionsDto: GetTransactionsDto): Promise<any[]>;
-    getTransactionsByUserId(userId: number): Promise<any[]>;
+    getTransactions(getTransactionsDto: GetTransactionsDto): Promise<unknown[]>;
+    getTransactionsByUserId(userId: number): Promise<unknown[]>;
 }

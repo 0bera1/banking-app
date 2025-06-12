@@ -1,4 +1,5 @@
 import { PoolClient } from 'pg';
+import { QueryResult } from '../database.service';
 export interface IDatabaseService {
     query<T = any>(sql: string, params?: any[]): Promise<{
         rows: T[];
@@ -13,7 +14,7 @@ export interface IDatabaseService {
     findBy<T = any>(table: string, field: string, value: any): Promise<T[]>;
 }
 export interface DatabaseRepository {
-    query<T>(text: string, params?: unknown[]): Promise<T>;
+    query<T>(text: string, params?: unknown[]): Promise<QueryResult<T>>;
     getClient(): Promise<PoolClient>;
     beginTransaction(client: PoolClient): Promise<void>;
     commitTransaction(client: PoolClient): Promise<void>;

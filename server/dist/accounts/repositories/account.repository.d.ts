@@ -1,6 +1,7 @@
 import { DatabaseService } from '../../database/database.service';
 import { AccountRepositoryContract } from '../interfaces/account.interface';
 import { AccountResponse } from '../dto/account-response.dto';
+import { CreateAccountDto } from '../dto/create-account.dto';
 export declare class AccountRepository implements AccountRepositoryContract {
     private readonly databaseService;
     constructor(databaseService: DatabaseService);
@@ -9,8 +10,10 @@ export declare class AccountRepository implements AccountRepositoryContract {
         balance: number;
         currency: string;
     }>;
-    updateBalance(id: number, amount: number): Promise<AccountResponse>;
-    create(userId: number, initialBalance: number, currency: string): Promise<AccountResponse>;
+    updateBalance(id: number, amount: number, user_id: number): Promise<AccountResponse>;
+    create(createAccountDto: CreateAccountDto & {
+        user_id: number;
+    }): Promise<AccountResponse>;
     remove(id: number, userId: number): Promise<void>;
     findOne(id: number): Promise<AccountResponse>;
     findByUserId(userId: number): Promise<AccountResponse[]>;
