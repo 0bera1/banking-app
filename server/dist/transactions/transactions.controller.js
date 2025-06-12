@@ -23,7 +23,7 @@ let TransactionsController = class TransactionsController {
         this.databaseService = databaseService;
     }
     async create(createTransactionDto) {
-        const result = await this.transactionsService.createTransaction(createTransactionDto.sender_id, createTransactionDto.from_account_id, createTransactionDto.receiver_iban, createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
+        const result = await this.transactionsService.createTransaction(createTransactionDto.sender_id, createTransactionDto.sender_id, createTransactionDto.receiver_id.toString(), createTransactionDto.amount, createTransactionDto.currency, createTransactionDto.description);
         return result;
     }
     async getUserTransactions(userId) {

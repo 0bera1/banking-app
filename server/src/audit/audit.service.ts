@@ -156,14 +156,25 @@ export class AuditService implements IAuditService {
     params.push(limit, offset); // Limit ve offset parametre olarak eklenir.
 
     // Log verileri veritabanından çekilir.
-    const result = await this.databaseService.query(query, params);
+    const result = await this.databaseService.query<{
+      id: string;
+      action: string;
+      tableName: string;
+      recordId: string;
+      oldData: string | null;
+      newData: string | null;
+      userId: string | null;
+      ipAddress: string | null;
+      userAgent: string | null;
+      createdAt: Date;
+    }>(query, params);
 
     // Toplam kayıt sayısını öğrenmek için sorgunun SELECT kısmı değiştirilir.
     const countQuery = query.replace(/SELECT.*?FROM/, 'SELECT COUNT(*) as total FROM')
                            .replace(/ORDER BY.*$/, '');
 
     // Toplam sayıyı veritabanından çeker.
-    const countResult = await this.databaseService.query(countQuery, params.slice(0, -2));
+    const countResult = await this.databaseService.query<{ total: string }>(countQuery, params.slice(0, -2));
 
     // Sonuçlar JSON parse
     return {

@@ -39,7 +39,7 @@ export class UsersService implements UserRepository {
     }
 
     public async findByEmail(email: string): Promise<UserResponseDto> {
-        const result = await this.databaseService.query(
+        const result = await this.databaseService.query<UserResponseDto>(
             'SELECT * FROM users WHERE email = $1',
             [email]
         );

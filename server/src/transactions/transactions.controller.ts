@@ -17,8 +17,8 @@ export class TransactionsController {
     async create(@Body() createTransactionDto: CreateTransactionDto) {
         const result = await this.transactionsService.createTransaction(
             createTransactionDto.sender_id,
-            createTransactionDto.from_account_id,
-            createTransactionDto.receiver_iban,
+            createTransactionDto.sender_id,
+            createTransactionDto.receiver_id.toString(),
             createTransactionDto.amount,
             createTransactionDto.currency,
             createTransactionDto.description
@@ -34,7 +34,7 @@ export class TransactionsController {
 
     @Get('account/:accountId')
     async getAccountTransactions(@Param('accountId') accountId: string) {
-        const accountResult = await this.databaseService.query(
+        const accountResult = await this.databaseService.query<{ id: number }>(
             'SELECT id FROM accounts WHERE id = $1',
             [accountId]
         );
@@ -59,7 +59,7 @@ export class TransactionsController {
                 ORDER BY created_at DESC 
                 LIMIT 1
             `;
-            const accountResult = await this.databaseService.query(accountQuery, [req.user.id]);
+            const accountResult = await this.databaseService.query<{ id: number }>(accountQuery, [req.user.id]);
             
             if (!accountResult.rows[0]) {
                 throw new HttpException('Aktif hesap bulunamadı', HttpStatus.NOT_FOUND);
