@@ -15,6 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("./accounts.service");
+const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
+const account_exception_filter_1 = require("./filters/account-exception.filter");
 let AccountsController = class AccountsController {
     constructor(accountService) {
         this.accountService = accountService;
@@ -60,8 +62,8 @@ let AccountsController = class AccountsController {
     async getUserAccounts(userId) {
         return await this.accountService.findByUserId(userId);
     }
-    async getAllAccounts() {
-        return await this.accountService.findAll();
+    async getAllAccounts(req) {
+        return await this.accountService.findByUserId(req.user.id);
     }
 };
 exports.AccountsController = AccountsController;
@@ -133,12 +135,15 @@ __decorate([
 ], AccountsController.prototype, "getUserAccounts", null);
 __decorate([
     (0, common_1.Get)(),
+    __param(0, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], AccountsController.prototype, "getAllAccounts", null);
 exports.AccountsController = AccountsController = __decorate([
     (0, common_1.Controller)('accounts'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseFilters)(account_exception_filter_1.AccountExceptionFilter),
     __param(0, (0, common_1.Inject)('IAccountService')),
     __metadata("design:paramtypes", [accounts_service_1.AccountService])
 ], AccountsController);

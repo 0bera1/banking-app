@@ -18,7 +18,7 @@ export declare class AccountService implements AccountServiceContract {
     }): Promise<AccountResponse>;
     remove(id: number, user_id: number): Promise<void>;
     findOne(id: number): Promise<AccountResponse>;
-    findByUserId(user_id: number): Promise<Array<AccountResponse>>;
+    findByUserId(userId: number): Promise<Array<AccountResponse>>;
     findByCardNumber(cardNumber: string): Promise<AccountResponse>;
     updateBalance(id: number, amount: number, user_id: number): Promise<AccountResponse>;
     updateStatus(id: number, status: 'active' | 'inactive' | 'blocked', user_id: number): Promise<AccountResponse>;

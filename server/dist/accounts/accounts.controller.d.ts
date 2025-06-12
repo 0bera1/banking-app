@@ -4,6 +4,12 @@ import { AccountResponse } from './dto/account-response.dto';
 import { BalanceResponse } from './dto/balance-response.dto';
 import { AccountStatusResponse } from './dto/account-status-response.dto';
 import { IbanVerificationResponse } from './dto/iban-verification-response.dto';
+import { Request } from 'express';
+interface RequestWithUser extends Request {
+    user: {
+        id: number;
+    };
+}
 export declare class AccountsController {
     private readonly accountService;
     constructor(accountService: AccountService);
@@ -16,5 +22,6 @@ export declare class AccountsController {
     withdraw(id: number, request: AccountRequest): Promise<AccountResponse>;
     getAccount(id: number): Promise<AccountResponse>;
     getUserAccounts(userId: number): Promise<Array<AccountResponse>>;
-    getAllAccounts(): Promise<Array<AccountResponse>>;
+    getAllAccounts(req: RequestWithUser): Promise<Array<AccountResponse>>;
 }
+export {};

@@ -1,12 +1,23 @@
-import {Body, Controller, Delete, Get, Inject, Param, Post, Put} from '@nestjs/common';
+import {Body, Controller, Delete, Get, Inject, Param, Post, Put, UseGuards, UseFilters, Req} from '@nestjs/common';
 import {AccountService} from './accounts.service';
 import {AccountRequest} from './dto/account-request.dto';
 import {AccountResponse} from './dto/account-response.dto';
 import {BalanceResponse} from './dto/balance-response.dto';
 import {AccountStatusResponse} from './dto/account-status-response.dto';
 import {IbanVerificationResponse} from './dto/iban-verification-response.dto';
+import {JwtAuthGuard} from '../auth/guards/jwt-auth.guard';
+import {AccountExceptionFilter} from './filters/account-exception.filter';
+import {Request} from 'express';
+
+interface RequestWithUser extends Request {
+    user: {
+        id: number;
+    };
+}
 
 @Controller('accounts')
+@UseGuards(JwtAuthGuard)
+@UseFilters(AccountExceptionFilter)
 export class AccountsController {
     constructor(
         @Inject('IAccountService')
@@ -83,7 +94,7 @@ export class AccountsController {
     }
 
     @Get()
-    public async getAllAccounts(): Promise<Array<AccountResponse>> {
-        return await this.accountService.findAll();
+    public async getAllAccounts(@Req() req: RequestWithUser): Promise<Array<AccountResponse>> {
+        return await this.accountService.findByUserId(req.user.id);
     }
 }

@@ -22,6 +22,8 @@ const delete_account_handler_1 = require("./handlers/delete-account-handler");
 const get_balance_handler_1 = require("./handlers/get-balance-handler");
 const verify_iban_handler_1 = require("./handlers/verify-iban-handler");
 const update_status_handler_1 = require("./handlers/update-status-handler");
+const users_service_1 = require("../users/users.service");
+const database_service_1 = require("../database/database.service");
 let AccountsModule = class AccountsModule {
 };
 exports.AccountsModule = AccountsModule;
@@ -30,13 +32,20 @@ exports.AccountsModule = AccountsModule = __decorate([
         imports: [database_module_1.DatabaseModule, users_module_1.UsersModule],
         controllers: [accounts_controller_1.AccountsController],
         providers: [
+            users_service_1.UsersService,
             {
                 provide: 'IAccountService',
-                useClass: accounts_service_1.AccountService
+                useFactory: (repository, usersService, validator) => {
+                    return new accounts_service_1.AccountService(repository, usersService, validator);
+                },
+                inject: ['IAccountRepository', users_service_1.UsersService, 'IAccountValidator']
             },
             {
                 provide: 'IAccountRepository',
-                useClass: account_repository_1.AccountRepository
+                useFactory: (databaseService) => {
+                    return new account_repository_1.AccountRepository(databaseService);
+                },
+                inject: [database_service_1.DatabaseService]
             },
             {
                 provide: 'IAccountValidator',

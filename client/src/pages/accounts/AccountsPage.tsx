@@ -2,24 +2,40 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AccountList } from '../../components/accounts/AccountList';
 import { CreateAccountForm } from '../../components/accounts/CreateAccountForm';
+import { useNavigate } from 'react-router-dom';
 
 export const AccountsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
-  const { data: accounts, isLoading } = useQuery({
+  const { data: accounts, isLoading, error } = useQuery({
     queryKey: ['accounts'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        throw new Error('Oturum süresi dolmuş');
+      }
+
       const response = await fetch('http://localhost:3000/accounts', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
-      if (!response.ok) {
-        throw new Error('Hesaplar yüklenirken bir hata oluştu');
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+        throw new Error('Oturum süresi dolmuş');
       }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.mesaj || 'Hesaplarınız yüklenirken bir hata oluştu');
+      }
+
       return response.json();
     },
   });
@@ -28,6 +44,17 @@ export const AccountsPage = () => {
     setIsCreateModalOpen(false);
     queryClient.invalidateQueries({ queryKey: ['accounts'] });
   };
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-red-600 text-center">
+          <p className="text-lg font-semibold">Hata!</p>
+          <p>{(error as Error).message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -45,8 +72,13 @@ export const AccountsPage = () => {
         <div className="flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
+      ) : accounts && accounts.length > 0 ? (
+        <AccountList accounts={accounts} />
       ) : (
-        <AccountList accounts={accounts || []} />
+        <div className="text-center py-8">
+          <p className="text-gray-500">Henüz hesabınız bulunmuyor.</p>
+          <p className="text-gray-500 mt-2">Yeni bir hesap oluşturmak için "Yeni Hesap" butonuna tıklayabilirsiniz.</p>
+        </div>
       )}
 
       {isCreateModalOpen && (

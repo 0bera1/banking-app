@@ -14,18 +14,26 @@ import { GetBalanceHandler } from './handlers/get-balance-handler';
 import { VerifyIbanHandler } from './handlers/verify-iban-handler';
 import { UpdateStatusHandler } from './handlers/update-status-handler';
 import { UsersService } from '../users/users.service';
+import { DatabaseService } from '../database/database.service';
 
 @Module({
     imports: [DatabaseModule, UsersModule],
     controllers: [AccountsController],
     providers: [
+        UsersService,
         {
             provide: 'IAccountService',
-            useClass: AccountService
+            useFactory: (repository: AccountRepository, usersService: UsersService, validator: AccountValidator) => {
+                return new AccountService(repository, usersService, validator);
+            },
+            inject: ['IAccountRepository', UsersService, 'IAccountValidator']
         },
         {
             provide: 'IAccountRepository',
-            useClass: AccountRepository
+            useFactory: (databaseService: DatabaseService) => {
+                return new AccountRepository(databaseService);
+            },
+            inject: [DatabaseService]
         },
         {
             provide: 'IAccountValidator',

@@ -55,7 +55,13 @@ class AccountRepository {
         return this.mapToAccountResponse(result.rows[0]);
     }
     async findAll() {
-        const result = await this.databaseService.query('SELECT * FROM accounts');
+        if (!this.databaseService) {
+            throw new Error('Veritabanı servisi başlatılmadı');
+        }
+        const query = `
+            SELECT * FROM accounts ORDER BY created_at DESC
+        `;
+        const result = await this.databaseService.query(query);
         return result.rows.map(row => this.mapToAccountResponse(row));
     }
     async deposit(id, amount, userId) {
@@ -67,7 +73,10 @@ class AccountRepository {
         return this.mapToAccountResponse(result.rows[0]);
     }
     async findByIban(iban) {
-        const result = await this.databaseService.query('SELECT * FROM accounts WHERE iban = $1', [iban]);
+        const query = `
+            SELECT * FROM accounts WHERE iban = $1
+        `;
+        const result = await this.databaseService.query(query, [iban]);
         return this.mapToAccountResponse(result.rows[0]);
     }
     generateIban() {

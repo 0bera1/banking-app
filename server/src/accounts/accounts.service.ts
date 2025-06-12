@@ -82,8 +82,8 @@ export class AccountService implements AccountServiceContract {
         return await this.repository.findOne(id);
     }
 
-    public async findByUserId(user_id: number): Promise<Array<AccountResponse>> {
-        return await this.repository.findByUserId(user_id);
+    public async findByUserId(userId: number): Promise<Array<AccountResponse>> {
+        return await this.repository.findByUserId(userId);
     }
 
     public async findByCardNumber(cardNumber: string): Promise<AccountResponse> {

@@ -101,9 +101,13 @@ export class AccountRepository implements AccountRepositoryContract {
     }
 
     async findAll(): Promise<AccountResponse[]> {
-        const result = await this.databaseService.query<AccountRow>(
-            'SELECT * FROM accounts'
-        );
+        if (!this.databaseService) {
+            throw new Error('Veritabanı servisi başlatılmadı');
+        }
+        const query = `
+            SELECT * FROM accounts ORDER BY created_at DESC
+        `;
+        const result = await this.databaseService.query<AccountRow>(query);
         return result.rows.map(row => this.mapToAccountResponse(row));
     }
 
@@ -124,10 +128,10 @@ export class AccountRepository implements AccountRepositoryContract {
     }
 
     async findByIban(iban: string): Promise<AccountResponse> {
-        const result = await this.databaseService.query<AccountRow>(
-            'SELECT * FROM accounts WHERE iban = $1',
-            [iban]
-        );
+        const query = `
+            SELECT * FROM accounts WHERE iban = $1
+        `;
+        const result = await this.databaseService.query<AccountRow>(query, [iban]);
         return this.mapToAccountResponse(result.rows[0]);
     }
 

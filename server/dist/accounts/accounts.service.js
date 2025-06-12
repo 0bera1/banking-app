@@ -47,8 +47,8 @@ class AccountService {
     async findOne(id) {
         return await this.repository.findOne(id);
     }
-    async findByUserId(user_id) {
-        return await this.repository.findByUserId(user_id);
+    async findByUserId(userId) {
+        return await this.repository.findByUserId(userId);
     }
     async findByCardNumber(cardNumber) {
         return await this.repository.findByCardNumber(cardNumber);
